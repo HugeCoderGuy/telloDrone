@@ -19,22 +19,18 @@ BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
 
 # initialize model and camera connection with drone
-model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt', cfg="cfg/deploy/yolov7-tiny.yaml")
+model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/runs/train/yolov7-AlTello6/weights/best.pt')
 # cap = cv.VideoCapture(VIDEO_URL)
 # cap.open(VIDEO_URL)
 cap = cv.VideoCapture(0)
 
-print("Camera Ready. Ensure that there is only one tennisball and no faces in the frame.")
+print("Camera Ready. Ensure that there is only one tennis ball and no faces in the frame.")
 
 ret, frame = cap.read()
 
-focal_length_found = focal_length(BALL_DIST, BALL_WIDTH, measure_ball(frame))
+focal_length_found = focal_length(BALL_DIST, BALL_WIDTH, measure_ball(frame, model, False)[0])
 print(f"Camera focal length is {focal_length_found}")
 
-# create collections.deque list with zeros
-# dists_x = deque([0, 0, 0], maxlen=3)
-# dists_y = deque([0, 0, 0], maxlen=3)
-# dists_z = deque([0, 0, 0], maxlen=3)
 
 last_dist = {'x': 0, 'y': 0, 'z': 0}
 change_in_dist_z = 0
@@ -44,9 +40,6 @@ speeds_y = deque((0, 0, 0), maxlen=3)
 speeds_z = deque((0, 0, 0), maxlen=3)
 avg_speed = {'x': 0, 'y': 0, 'z': 0}
 
-
-initial_time = 0
-change_in_time = time.time()
 ball_pixels = 0
 
 
@@ -57,10 +50,12 @@ while True:
 
     # calling face_data function
     model_start_time = time.time()
-    ball_pixels, ball_location = measure_ball(frame, model)
-    model_ru = time.time() - model_start_time
+    r = measure_ball(frame, model, False)
 
-    if ball_pixels != 0:
+    if r is not None:
+        ball_pixels = r[0]
+        ball_location = r[1]
+        model_ru = time.time() - model_start_time
         distance = distance_finder(focal_length_found, BALL_WIDTH, ball_pixels)
 
         # converting centimeters into meters
@@ -71,7 +66,7 @@ while True:
         speeds_z.append(calc_speed(change_in_dist_z, change_in_time))
 
         speeds_x.append(pixels_to_speed('x', last_dist, ball_location, ball_pixels, change_in_time))
-        speeds_y.append(pixels_to_speed('y', last_dist, ball_location, ball_pixels, change_in_time))
+        speeds_y.append(-1 * pixels_to_speed('y', last_dist, ball_location, ball_pixels, change_in_time))
 
         # Care less about z directio
         avg_speed['z'] = abs(average(speeds_z))
@@ -80,7 +75,7 @@ while True:
 
         # graph speed vector
         cv.arrowedLine(frame, (ball_location['x'], ball_location['y']),
-                       (ball_location['x'] - last_dist['x'], ball_location['y'] - last_dist['y']), RED, 9)
+                       (2*ball_location['x'] - last_dist['x'], 2*ball_location['y'] - last_dist['y']), RED, 2)
         # log all measurements for next loop
         last_dist['z'] = dist_meters_z
         last_dist['x'] = ball_location['x']
@@ -109,21 +104,21 @@ while True:
     cv.putText(
         frame, f"Z Dist = {round(dist_meters_z, 2)} m", (50, 30), fonts, 0.6, WHITE, 2)
 
-    cv.line(frame, (45, 95), (255, 25), (0, 255, 0), 30)
-    cv.line(frame, (45, 95), (255, 25), (0, 0, 0), 22)
+    cv.line(frame, (45, 115), (255, 115), (0, 255, 0), 30)
+    cv.line(frame, (45, 115), (255, 115), (0, 0, 0), 22)
     cv.putText(
-        frame, f"X Speed = {round(avg_speed['x'], 2)} m", (50, 30), fonts, 0.6, WHITE, 2)
+        frame, f"X Speed: {round(avg_speed['x'], 2)} m/s", (50, 120), fonts, 0.6, WHITE, 2)
 
-    cv.line(frame, (45, 120), (255, 25), (0, 255, 0), 30)
-    cv.line(frame, (45, 120), (255, 25), (0, 0, 0), 22)
+    cv.line(frame, (45, 155), (255, 155), (0, 255, 0), 30)
+    cv.line(frame, (45, 155), (255, 155), (0, 0, 0), 22)
     cv.putText(
-        frame, f"Y Speed = {round(avg_speed['y'], 2)} m", (50, 30), fonts, 0.6, WHITE, 2)
+        frame, f"Y Speed: {round(avg_speed['y'], 2)} m/s", (50, 160), fonts, 0.6, WHITE, 2)
 
     overall_time = time.time() - initial_time
-    cv.line(frame, (45, 145), (255, 25), (0, 0, 255), 30)
-    cv.line(frame, (45, 145), (255, 25), (0, 0, 0), 22)
+    cv.line(frame, (45, 195), (255, 195), (0, 0, 255), 30)
+    cv.line(frame, (45, 195), (255, 195), (0, 0, 0), 22)
     cv.putText(
-        frame, f"FPS = {round(1 / overall_time, 2)} m", (50, 30), fonts, 0.6, WHITE, 2)
+        frame, f"FPS = {round(1 / overall_time, 2)} ", (50, 200), fonts, 0.6, WHITE, 2)
 
     cv.imshow("frame", frame)
     if cv.waitKey(1) == ord("q"):

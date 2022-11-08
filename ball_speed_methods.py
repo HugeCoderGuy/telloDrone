@@ -1,11 +1,12 @@
 from collections import deque
+import cv2 as cv
 
 
 BALL_WIDTH = 6.8  # cm
 
 
 # takes frame and then returns any tennis ball locations
-def measure_ball(frame, model):
+def measure_ball(frame, model, bound_box=True):
     detections = model(frame[..., ::-1])
     result = detections.pandas().xyxy[0].to_dict(orient="records")
     if len(result) > 0:
@@ -17,13 +18,21 @@ def measure_ball(frame, model):
         measured_height = int(ball['ymax']) - int(ball['ymin'])
         # ball should be in square bound box. take average for ~ square dims
         ball_size = (measured_width + measured_height)/2
-        ball_location = {'x': int(sum(ball['xmax'], ball['xmin']) / 2),
-                         'y': int(sum(ball['ymax'], ball['ymin']) / 2)}
-        return ball_size, ball_location
+        x = int((ball['xmax'] + ball['xmin']) / 2)
+        y = int((ball['ymax'] + ball['ymin']) / 2)
+        ball_location = {'x': x, 'y': y}
+
+        if not bound_box:
+            return [ball_size, ball_location]
+        else:
+            cv.rectangle(frame, (ball['xmin'], ball['ymax']), (ball['xmax'], ball['ymax']),
+                          (255, 0, 0), 4)
+            return [ball_size, ball_location, frame]
 
 
 # Source: https://www.section.io/engineering-education/approximating-the-speed-of-an-object-and-its-distance/
 def focal_length(determined_distance, actual_width, width_in_rf_image):
+    print(width_in_rf_image, type(width_in_rf_image))
     focal_length_value = (width_in_rf_image * determined_distance) / actual_width
     return focal_length_value
 
