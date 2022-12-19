@@ -1,8 +1,8 @@
 from collections import deque
 import cv2 as cv
+import math
 
-
-BALL_WIDTH = 6.8  # cm
+BALL_WIDTH = 6.3  # cm
 
 
 # takes frame and then returns any tennis ball locations
@@ -40,7 +40,7 @@ def focal_length(determined_distance, actual_width, width_in_rf_image):
 def distance_finder(focal_length, real_ball_width, ball_width):
     if ball_width is not None:
         distance = (real_ball_width * focal_length) / ball_width
-        return distance
+        return distance / 100  # convert to meters
     else:
         return 0
 
@@ -57,6 +57,12 @@ def calc_speed(dist: float, time: float) -> float:
 # calculate speed in x from pixels to m/s
 def pixels_to_speed(cord: str, last_dist: dict, ball_location: dict, ball_pixels: int, change_in_time: float):
     pixel_chg = ball_location[cord] - last_dist[cord]
-    change_in_dist = pixel_chg * (BALL_WIDTH / ball_pixels)  # = pixel*(meters/pixels)
+    change_in_dist = pixel_chg * ((BALL_WIDTH * .01) / ball_pixels)  # = pixel*(meters/pixels)
     # save x value after dist calc
     return calc_speed(change_in_dist, change_in_time)
+
+
+def distance_from_between_points(point1: dict, point2: dict) -> float:
+    dist = math.sqrt( (point1['x'] - point2['x']) ** 2 +
+                      (point1['y'] - point2['y']) ** 2)
+    return dist

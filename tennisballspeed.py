@@ -5,11 +5,11 @@ from collections import deque
 import time
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball
 
-# TODO: make this script ru ad be able to measure speed
+# TODO: test w/ droe
 
 # declare measuring values:
 BALL_DIST = 30  # cm
-BALL_WIDTH = 6.8  # cm
+BALL_WIDTH = 6.3  # cm
 # Defining the fonts family, size, type
 fonts = cv.FONT_HERSHEY_COMPLEX
 # Definition of the RGB Colors format
@@ -45,6 +45,7 @@ ball_pixels = 0
 
 # loop to assess the performance of speed calculator
 while True:
+    print("focal length found: ", focal_length_found)
     initial_time = time.time()
     _, frame = cap.read()
 
