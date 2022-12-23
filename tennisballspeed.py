@@ -60,7 +60,7 @@ while True:
         distance = distance_finder(focal_length_found, BALL_WIDTH, ball_pixels)
 
         # converting centimeters into meters
-        dist_meters_z = distance / 100
+        dist_meters_z = distances
         change_in_dist_z = last_dist['z'] - dist_meters_z
         change_in_time = time.time() - initial_time
         # calculating the speed in of cords
