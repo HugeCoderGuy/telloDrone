@@ -1,7 +1,7 @@
 import torch
 import cv2
 import asyncio
-from tello_asyncio import Tello, VIDEO_URL
+from tello_asyncio import Tello, VIDEO_URL, Vector
 from collections import deque
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball, distance_from_between_points
 import time
@@ -24,6 +24,7 @@ class DodgerTello:
         self.face_size = 0
         self.face_location = 0
         self.last_face_location = 0
+        self.real_face_size = .35 # DOUBLE CHECK THIS VALUE
 
         # camera variables
         self.focal_length
@@ -66,7 +67,8 @@ class DodgerTello:
             for result in results:
                 # filter bad results
                 if result['confidence'] >= .5:
-                    # save tennis ball data
+                    
+                    # Tennis ball calcs and identification
                     if result['name'] == 'Tennis-Ball':
                         tennisball_in_frame = True
                         measured_width_ball = int(result['xmax']) - int(result['xmin'])
@@ -97,7 +99,7 @@ class DodgerTello:
                         self.last_dist['x'] = self.ball_location['x']
                         self.last_dist['y'] = self.ball_location['y']
 
-                    # filter or save face location
+                    # Face locating 
                     if result['name'] == 'face':
                         measured_width_face = int(result['xmax']) - int(result['xmin'])
                         measured_height_face = int(result['ymax']) - int(result['ymin'])
@@ -117,9 +119,10 @@ class DodgerTello:
                             if curr_face_dist_to_center < face_dist_to_center:
                                 self.face_size = curr_face_size
                                 self.face_location = curr_face_location
-                                # 520.77 for cam, 748.58 for will, 781.10 for joda
 
+                        self.face_x_dist = distance_finder(self.focal_length, self.real_face_size, self.face_size)
                         face_counter += 1
+                        print("Troubleshooting. Face size is: ", self.face_size)
 
             if not tennisball_in_frame:
                 self.avg_speed['z'] = 0
@@ -127,18 +130,42 @@ class DodgerTello:
                 self.avg_speed['y'] = 0
 
     def follow_face(self):
-        if self.face_size['x'] - self.im_center > 20:
+        face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
+                            'y':(self.face_location['y'] - self.im_center['y'])}
+        dist_to_move = {'x':0, 'y':0, 'z':0}
+
+        # turn towards face direciton
+        if face_from_center['x'] > 20:
             asyncio.run(self.rotate_clockwise(5))
-        elif self.face_size['x'] - self.im_center < 20:
+        elif face_from_center['x'] < 20:
             asyncio.run(self.rotate_c_clockwise(5))
-
-
-
+            
+        # adujust x coord based on face distance
+        if self.face_x_dist <= 2.25:
+            dist_to_move['x'] = -20
+        elif self.face_x_dist >= 2.75:
+            dist_to_move['x'] = 20
+            
+        # adjust y coords based on pixels
+        if -face_from_center['y'] >= 30: # y coords are inversed in frame measures
+            dist_to_move['y'] = -20
+        elif -face_from_center['y'] <= 30:
+            dist_to_move['y'] = 20
+            
+        self.tello.got_to(relative_position=Vector(dist_to_move['x'], # POTENTIALLY MAKE THIS A AWAIT FUNCITON
+                                                   dist_to_move['y'],
+                                                   dist_to_move['z']), speed=40)
+                    
 
     def dodge_ball(self):
         pass
 
+    def main(self):
+        self.update_object_variables()
+        self.dodge_ball()
+        self.follow_face()
 
+    # Helper functions
     async def shutdown(self):
         try:
             await self.tello.land()
