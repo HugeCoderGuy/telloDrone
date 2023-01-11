@@ -5,6 +5,9 @@ from collections import deque
 import time
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball
 
+import asyncio
+from tello_asyncio import Tello, VIDEO_URL
+
 # TODO: test w/ droe
 
 # declare measuring values:
@@ -20,9 +23,52 @@ WHITE = (255, 255, 255)
 
 # initialize model and camera connection with drone
 model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/runs/train/yolov7-AlTello6/weights/best.pt')
-# cap = cv.VideoCapture(VIDEO_URL)
-# cap.open(VIDEO_URL)
-cap = cv.VideoCapture(0)
+
+import objc
+
+objc.loadBundle('CoreWLAN',
+                bundle_path = '/System/Library/Frameworks/CoreWLAN.framework',
+                module_globals = globals())
+
+iface = CWInterface.interface()
+
+networks, error = iface.scanForNetworksWithName_error_('TELLO-F235F8', None)
+
+network = networks.anyObject()
+
+success, error = iface.associateToNetwork_password_error_(network, '', None)
+# async def main():
+#     drone = Tello()
+#     await drone.wifi_wait_for_network(prompt=True) # TELLO-F235F8
+#
+#     print('...ok, can connecting to drone now')
+#     await drone.connect()
+#
+#     snr = await drone.wifi_signal_to_noise_ratio
+#     print(f'WiFi signal to noise ratio: {snr}%')
+#
+#
+# # Python 3.7+
+# #asyncio.run(main())
+# loop = asyncio.get_event_loop()
+# loop.run_until_complete(main())
+
+async def main():
+    drone = Tello()
+    await drone.wifi_wait_for_network(prompt=False)
+    await drone.connect()
+    await drone.takeoff()
+    await drone.land()
+
+# Python 3.7+
+#asyncio.run(main())
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
+
+cap = cv.VideoCapture('udp://192.168.10.1:11111')
+cap.open('udp://192.168.10.1:11111')
+# cap = cv.VideoCapture(0)
+
 
 print("Camera Ready. Ensure that there is only one tennis ball and no faces in the frame.")
 
@@ -128,3 +174,6 @@ while True:
     print(f"Overal time is {overall_time}")
     print(f"model time is {model_ru}")
 
+if cap:
+    cap.release()
+    cv.destroyAllWindows()
