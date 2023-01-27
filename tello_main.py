@@ -9,6 +9,8 @@ import time
 
 class DodgerTello:
     def __init__(self):
+        # TODO change file to handle new api
+
         # object detection
         self.model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
         self.tello = Tello()
@@ -18,7 +20,7 @@ class DodgerTello:
         h, w = frame.shape
         self.im_center = {'x': (w/2), 'y': (h/2)}
 
-        self.last_time = time.time()
+        self.time_tracker = deque([time.time()])
 
         # save face data
         self.face_size = 0
@@ -52,11 +54,10 @@ class DodgerTello:
         asyncio.run(takeoff())
 
     def update_object_variables(self):
-        #TODO update sample time locations
 
         # process frame w/ model
         frame = self.cap.read()
-        self.last_time = time.time() # <--- check this time samplig locatio
+        self.time_tracker.appendleft(time.time())
         detections = self.model(frame[..., ::-1])
         results = detections.pandas().xyxy[0].to_dict(orient="records")
 
@@ -81,7 +82,7 @@ class DodgerTello:
                         dist_meters_z = distance_finder(self.focal_length, self.real_ball_size, self.m_ball_size)
 
                         change_in_dist_z = self.last_dist['z'] - dist_meters_z
-                        change_in_time = time.time() - self.last_time
+                        change_in_time = self.time_tracker[0] - self.time_tracker.pop()
                         # calculating the speed in of cords
                         self.speeds_z.append(calc_speed(change_in_dist_z, change_in_time))
                         self.speeds_x.append(pixels_to_speed('x', self.last_dist, self.ball_location,
@@ -165,6 +166,7 @@ class DodgerTello:
         self.dodge_ball()
         self.follow_face()
 
+    # TODO remove these helpers if we change api
     # Helper functions
     async def shutdown(self):
         try:
