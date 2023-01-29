@@ -159,7 +159,18 @@ class DodgerTello:
                     
 
     def dodge_ball(self):
-        pass
+        # TODO vector call to move thee drone and maybe make a vector function to move it
+        if self.last_dist['z'] <= 3 and self.avg_speed['z'] > 1:
+            ball_from_center = {'x': (self.ball_location['x'] - self.im_center['x']),
+                                'y': (self.ball_location['y'] - self.im_center['y'])}
+            # upper left
+            if ball_from_center['x'] < 0 and ball_from_center['y'] > 0: # vector move?
+            # lower left
+            if ball_from_center['x'] < 0 and ball_from_center['y'] < 0: # vector move?
+            # upper right
+            if ball_from_center['x'] > 0 and ball_from_center['y'] > 0:  # vector move?
+            # lower right
+            if ball_from_center['x'] > 0 and ball_from_center['y'] < 0:  # vector move?
 
     def main(self):
         self.update_object_variables()
