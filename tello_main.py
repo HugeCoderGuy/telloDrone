@@ -9,6 +9,15 @@ import time
 
 class DodgerTello:
     def __init__(self):
+        """Class to encapsulate Tello object w/ its corresponding ML model
+        
+        Model is based on Yolov7 w/ training data created by me with images and
+        labels pulled from Roboflow. Tello drone is operated roughly as a state
+        machine with update states -> action(based on states) -> repeat.
+        
+        Note, delay in TCP video connection often causes ~1s delay in video feed.
+        So, don't throw the ball to hard at the little guy!
+        """
         # object detection
         self.model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
         self.tello = Tello()
@@ -52,6 +61,12 @@ class DodgerTello:
         asyncio.run(takeoff())
 
     def update_object_variables(self):
+        """Updates internal variables tracking faces and or tennis balls
+        
+        measurements are mildly averaged to handle noise and occasional 
+        misidentificaitons with model. These internal variables are then used
+        in the actions function to drive the Tello api calls
+        """
         #TODO update sample time locations
 
         # process frame w/ model
@@ -130,6 +145,13 @@ class DodgerTello:
                 self.avg_speed['y'] = 0
 
     def follow_face(self):
+        """Funciton to handle how the Tello tracks and follows in frame face
+        
+        Tello will favor the face closest to the center of the screen to handle
+        cases where multiple people are seen in frame. .follow_face() will have
+        lower priority than dodge ball. Prioirty is implemented with order of TCP
+        calls resulting in tello only listenting to most recent call
+        """
         face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
                             'y':(self.face_location['y'] - self.im_center['y'])}
         dist_to_move = {'x':0, 'y':0, 'z':0}
@@ -161,9 +183,11 @@ class DodgerTello:
         pass
 
     def main(self):
+        """Rough Drone statemachine"""
         self.update_object_variables()
-        self.dodge_ball()
         self.follow_face()
+        self.dodge_ball()
+
 
     # Helper functions
     async def shutdown(self):
@@ -179,12 +203,8 @@ class DodgerTello:
         await self.tello.turn_counterclockwise(degrees)
 
 
-
-
-
-
-
     def close_out(self):
+        """Handles final Tello state when given signal to end sequence"""
         async def complete():
             try:
                 await self.tello.land()

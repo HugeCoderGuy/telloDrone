@@ -5,6 +5,15 @@ from collections import deque
 import time
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball
 
+
+"""Test Script to help troubleshoot model identification of faces and tennis balls.
+
+This script provides a GUI that shows user the current measurements so that they can
+be compared and contrasted with physical measurements. Tennis ball must be in frame 
+for first pass of test script.
+"""
+
+
 # TODO: test w/ droe
 
 # declare measuring values:
