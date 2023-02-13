@@ -194,6 +194,12 @@ class DodgerTello:
             if ball_from_center['x'] > 0 and ball_from_center['y'] < 0:  # vector move?
 
     def main(self):
+        try:
+            self.update_object_variables()
+            self.dodge_ball()
+            self.follow_face()
+        finally:
+            # TODO have drone land
         """Rough Drone statemachine"""
         self.update_object_variables()
         self.follow_face()
