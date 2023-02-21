@@ -55,7 +55,7 @@ def main():
             if counter == frame_qty[0]:
                 drone.takeoff()
             elif counter == frame_qty[1]:
-                drone.up(move_dist)
+                drone.flip_forward()
             elif counter == frame_qty[2]:
                 drone.backward(move_dist)
             elif counter == frame_qty[3]:
