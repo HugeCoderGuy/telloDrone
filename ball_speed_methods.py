@@ -2,13 +2,14 @@ from collections import deque
 import cv2 as cv
 import math
 
-BALL_WIDTH = 6.3  # cm
+BALL_WIDTH = 6.6  # cm
 
 
 # takes frame and then returns any tennis ball locations
 def measure_ball(frame, model, bound_box=True):
     detections = model(frame[..., ::-1])
     result = detections.pandas().xyxy[0].to_dict(orient="records")
+    print(result, "IN MEASURE BALL")
     if len(result) > 0:
         for i in result:
             if i["name"] == "Tennis-Ball" or "face":

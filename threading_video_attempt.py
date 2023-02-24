@@ -6,7 +6,10 @@ import cv2.cv2 as cv2  # for avoidance of pylint error
 import numpy
 import time
 from threading import Thread
+import torch
+from ball_speed_methods import measure_ball
 
+# model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
 frame_qty = [i for i in range(0, 800, 50) if i % 50 == 0]
 
 class VideoFeed():
@@ -20,7 +23,7 @@ class VideoFeed():
         return self
         
     def update_frame(self):
-        for frame in self.container:
+        for frame in self.container.decode(video=0):
             self.frame = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
             
     def stop(self):
@@ -45,31 +48,36 @@ def main():
                 print(ave)
                 print('retry...')
                 
-        videofeed = VideoFeed(container)
-        videofeed.start()
+        # videofeed = VideoFeed(container)
+        # videofeed.start()
 
         move_dist = 15
         counter = 0
 
         while True:
-            if counter == frame_qty[0]:
-                drone.takeoff()
-            elif counter == frame_qty[1]:
-                drone.flip_forward()
-            elif counter == frame_qty[2]:
-                drone.backward(move_dist)
-            elif counter == frame_qty[3]:
-                drone.toggle_fast_mode()
-                time.sleep(1)
-                drone.forward(move_dist)
-            elif counter == frame_qty[4]:
-                drone.land()
-                time.sleep(2)
-                videofeed.stop()
-                break
+            # if counter == frame_qty[0]:
+            #     drone.takeoff()
+            # elif counter == frame_qty[1]:
+            #     drone.flip_forward()
+            # elif counter == frame_qty[2]:
+            #     drone.backward(move_dist)
+            # elif counter == frame_qty[3]:
+            #     drone.toggle_fast_mode()
+            #     time.sleep(1)
+            #     drone.forward(move_dist)
+            # elif counter == frame_qty[4]:
+            #     drone.land()
+            #     time.sleep(2)
+            #     videofeed.stop()
+            #     break
+            for frame in container.decode(video=0):
+                frame = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
 
-            
-            cv2.imshow('Original', videofeed.frame)
+                cv2.imshow('Original', frame)
+                # r = measure_ball(videofeed.frame, model, False)
+
+
+
             counter += 1
 
 
