@@ -2,10 +2,11 @@ import time
 from threading import Thread
 from ball_speed_methods import measure_ball
 import torch
+import tellopy
 
 # THIS SCRIPT HAS THE MOST PROMISE
 class Controller():
-    def __init__(self, drone, model):
+    def __init__(self, drone, model=False):
         self.drone = drone
         self.stopped = False
         self.results = None
@@ -46,7 +47,7 @@ class Controller():
         return self
     
     def dodge_right(self):
-        self.drone.set_roll(-1)
+        self.drone.set_roll(1)
         time.sleep(.5)
         self.drone.set_roll(0)
         self.pause_after_call()
@@ -58,13 +59,13 @@ class Controller():
     def dodge_up(self):
         def drone_jump(self):
             self.drone.set_throttle(1)
-            time.sleep(.5)
+            time.sleep(1)
             self.drone.set_throttle(-1)
             time.sleep(.5)
             self.drone.set_throttle(0)
             self.pause_after_call()
         
-        Thread(target=drone_jump, args=()).start()
+        Thread(target=drone_jump, args=(self,)).start()
         return self
     
     def go_forward(self):
@@ -72,7 +73,7 @@ class Controller():
             self.drone.forward(10)
             self.pause_after_call()
             
-        Thread(target=self.drone_forward, args=()).start()
+        Thread(target=self.drone_forward, args=(self,)).start()
         return self
     
     def go_backward(self):
@@ -80,7 +81,7 @@ class Controller():
             self.drone.backward(10)
             self.pause_after_call()
             
-        Thread(target=self.drone_backward, args=()).start()
+        Thread(target=self.drone_backward, args=(self,)).start()
         return self
     
     def clockwise(self):
@@ -88,14 +89,14 @@ class Controller():
             self.drone.clockwise(5)
             self.pause_after_call()
             
-        Thread(target=drone_clockwise, args=()).start()
+        Thread(target=drone_clockwise, args=(self,)).start()
         
     def counter_clockwise(self):
         def drone_counter_clockwise(self):
             self.drone.counter_clockwise(5)
             self.pause_after_call()
             
-        Thread(target=drone_counter_clockwise, args=()).start()
+        Thread(target=drone_counter_clockwise, args=(self,)).start()
 
     def land(self):
         self.drone.land()
@@ -107,7 +108,7 @@ class Controller():
         return self
 
     # following two functs handle the object detection threads
-    def model_handler(self, frame, runner_id):
+    def model_handler(self, frame, runner_id=0):
         self.model_runners += 1
         self.delay_other_runners = True
         if self.debug:
@@ -120,16 +121,31 @@ class Controller():
             self.runner_going[self.counter] = (runner_id, False)
             self.counter += 1
         self.model_runners -= 1
+        return self
 
     def run_model(self, frame):
-        if self.model_runners <= self.numb_runners and self.delay_other_runners is False:
-            if self.debug:
-                if self.runner_id == self.numb_runners:
-                    self.runner_id = 0
-                    
-            Thread(target=self.model_handler, args=(frame, self.runner_id)).start()
-            self.runner_id += 1
+        if self.model:
+            if self.model_runners <= self.numb_runners and self.delay_other_runners is False:
+                if self.debug:
+                    if self.runner_id == self.numb_runners:
+                        self.runner_id = 0
+
+                    Thread(target=self.model_handler, args=(frame, self.runner_id)).start()
+                    self.runner_id += 1
+
+                # not debug mode:
+                else:
+                    Thread(target=self.model_handler, args=(frame,)).start()
         else:
             pass
 
 
+if __name__ == "__main__":
+    drone = tellopy.Tello()
+    drone.connect()
+    drone.wait_for_connection(60.0)
+
+
+    controller = Controller(drone)
+    controller.start()
+    controller.dodge_up()

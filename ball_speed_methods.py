@@ -9,7 +9,6 @@ BALL_WIDTH = 6.6  # cm
 def measure_ball(frame, model, bound_box=True):
     detections = model(frame[..., ::-1])
     result = detections.pandas().xyxy[0].to_dict(orient="records")
-    print(result, "IN MEASURE BALL")
     if len(result) > 0:
         for i in result:
             if i["name"] == "Tennis-Ball" or "face":

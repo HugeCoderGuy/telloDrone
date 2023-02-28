@@ -10,6 +10,7 @@ import tellopy
 import av
 import cv2.cv2 as cv2  # for avoidance of pylint error
 import numpy
+from Controller import Controller
 
 # TODO: currently frames are pulled from a queue. Need to have them live.
 
@@ -87,7 +88,7 @@ model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/runs/train/yolov7-
 
 # attempting to connec to drone camera
 drone = tellopy.Tello()
-
+controller = Controller(drone, model)
 try:
     drone.connect()
     drone.wait_for_connection(60.0)
@@ -110,15 +111,14 @@ try:
     while True:
         for image in container.decode(video=0):
             counter += 1
-            if counter % 30 != 0:
-                continue
-            print(type(image))
+            if counter % 2 == 0:
+                pass
             frame = cv2.cvtColor(numpy.array(image.to_image()), cv2.COLOR_RGB2BGR)
             if first_pass:
                 print("Camera Ready. Ensure that there is only one tennis ball and no faces in the frame.")
 
                 # focal_length_found = focal_length(BALL_DIST, BALL_WIDTH, measure_ball(frame, model, False)[0])
-                focal_length_found = 1060 # this focal length works!
+                focal_length_found = 1000 # this focal length works!
                 print(f"Camera focal length is {focal_length_found}")
 
                 last_dist = {'x': 0, 'y': 0, 'z': 0}
@@ -131,21 +131,23 @@ try:
 
                 ball_pixels = 0
                 first_pass = False
+                dist_meters_z = 0
+                model_ru = time.time()
                 continue
 
             # convert frame to cv2 object for model input
             # frame = cv2.cvtColor(numpy.array(frame.to_image()), cv2.COLOR_RGB2BGR)
 
-            print("focal length found: ", focal_length_found)
+            # print("focal length found: ", focal_length_found)
             initial_time = time.time()
 
             # calling face_data function
             model_start_time = time.time()
-            r = measure_ball(frame, model, False)
+            controller.run_model(frame)
 
-            if r is not None:
-                ball_pixels = r[0]
-                ball_location = r[1]
+            if controller.results is not None:
+                ball_pixels = controller.results[0]
+                ball_location = controller.results[1]
                 model_ru = time.time() - model_start_time
                 distance = distance_finder(focal_length_found, BALL_WIDTH, ball_pixels)
 
@@ -215,8 +217,8 @@ try:
             if cv.waitKey(1) == ord("q"):
                 break
 
-            print(f"Overal time is {overall_time}")
-            print(f"model time is {model_ru}")
+            # print(f"Overal time is {overall_time}")
+            # print(f"model time is {model_ru}")
 
 except Exception as ex:
     exc_type, exc_value, exc_traceback = sys.exc_info()
