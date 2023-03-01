@@ -6,21 +6,15 @@ import tellopy
 
 # THIS SCRIPT HAS THE MOST PROMISE
 class Controller():
-    def __init__(self, drone, model=False):
+    def __init__(self, drone):
         self.drone = drone
         self.stopped = False
         self.results = None
-        self.model = model
         self.model_runners = 0
         self.delay_other_runners = False
         self.numb_runners = 8
         self.debug = False
-        
-        if self.debug:
-            # variables to used to confirm that model threads are processing in order
-            self.runner_going = 100*[None]
-            self.counter = 0
-            self.runner_id = 0
+
             
     def pause_after_call(self):
         time.sleep(4)
@@ -107,37 +101,6 @@ class Controller():
         Thread(target=self.land, args=()).start()
         return self
 
-    # following two functs handle the object detection threads
-    def model_handler(self, frame, runner_id=0):
-        self.model_runners += 1
-        self.delay_other_runners = True
-        if self.debug:
-            self.runner_going[self.counter] = (runner_id, True)
-            self.counter += 1
-        time.sleep(.5)
-        self.delay_other_runners = False
-        self.results = measure_ball(frame, self.model, False)
-        if self.debug:
-            self.runner_going[self.counter] = (runner_id, False)
-            self.counter += 1
-        self.model_runners -= 1
-        return self
-
-    def run_model(self, frame):
-        if self.model:
-            if self.model_runners <= self.numb_runners and self.delay_other_runners is False:
-                if self.debug:
-                    if self.runner_id == self.numb_runners:
-                        self.runner_id = 0
-
-                    Thread(target=self.model_handler, args=(frame, self.runner_id)).start()
-                    self.runner_id += 1
-
-                # not debug mode:
-                else:
-                    Thread(target=self.model_handler, args=(frame,)).start()
-        else:
-            pass
 
 
 if __name__ == "__main__":

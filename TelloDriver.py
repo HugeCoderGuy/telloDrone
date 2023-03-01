@@ -5,10 +5,12 @@ from tello_asyncio import Tello, VIDEO_URL, Vector
 from collections import deque
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball, distance_from_between_points
 import time
+from Controller import Controller
 
 
-class DodgerTello:
-    def __init__(self):
+#TODO Make sure the .main() has a finally statement that closes out the drone connection
+class TelloDriver(Controller):
+    def __init__(self, drone, recv_conn):
         """Class to encapsulate Tello object w/ its corresponding ML model
 
         Model is based on Yolov7 w/ training data created by me with images and
@@ -18,13 +20,10 @@ class DodgerTello:
         Note, delay in TCP video connection often causes ~1s delay in video feed.
         So, don't throw the ball to hard at the little guy!
         """
-        # object detection
-        self.model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
-        self.tello = Tello()
-        self.cap = cv2.VideoCapture(VIDEO_URL)
-        self.cap.open(VIDEO_URL) # grabbed, frame = capture.read()
-        frame = self.cap.read()
-        h, w = frame.shape
+        super().__init__(drone)
+        # pipe connection to recieve model results
+        self.recv_conn = recv_conn
+
         self.im_center = {'x': (w/2), 'y': (h/2)}
 
         self.time_tracker = deque([time.time()])
@@ -36,7 +35,7 @@ class DodgerTello:
         self.real_face_size = .35 # DOUBLE CHECK THIS VALUE
 
         # camera variables
-        self.focal_length
+        self.focal_length = 1000
         self.real_ball_size = 6.3 # cm
 
         # ball variables
@@ -53,12 +52,6 @@ class DodgerTello:
         self.speeds_z = deque((0, 0, 0), maxlen=3)
         self.avg_speed = {'x': 0, 'y': 0, 'z': 0}
 
-        # takeoff sequecence as internal funct for asycio
-        async def takeoff():
-            await self.tello.wifi_wait_for_network(prompt=True)
-            await self.tello.connect()
-            await self.tello.takeoff()
-        asyncio.run(takeoff())
 
     def update_object_variables(self):
         """Updates internal variables tracking faces and or tennis balls
@@ -206,26 +199,3 @@ class DodgerTello:
         self.dodge_ball()
 
 
-    # TODO remove these helpers if we change api
-    # Helper functions
-    async def shutdown(self):
-        try:
-            await self.tello.land()
-        finally:
-            await self.tello.disconnect()
-
-    async def rotate_clockwise(self, degrees: int):
-        await self.tello.turn_clockwise(degrees)
-
-    async def rotate_c_clockwise(self, degrees: int):
-        await self.tello.turn_counterclockwise(degrees)
-
-
-    def close_out(self):
-        """Handles final Tello state when given signal to end sequence"""
-        async def complete():
-            try:
-                await self.tello.land()
-            finally:
-                await self.tello.disconnect()
-        asyncio.run(complete())
