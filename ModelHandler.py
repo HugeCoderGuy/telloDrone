@@ -5,12 +5,14 @@ from ball_speed_methods import measure_ball
 
 delay_other_runners = False
 model_runners = 0
+result = None
 
 
 def model_handler(model, recv_conn, send_conn):
     global delay_other_runners
     global model_runners
     runner_delay = .3
+    global result
     numb_runners = 8
 
     def _model_handler(frame):
@@ -20,20 +22,28 @@ def model_handler(model, recv_conn, send_conn):
         delay_other_runners = False
         result = measure_ball(frame, model, False)
         model_runners -= 1
-        send_conn.send(result)
+
 
     while True:
         print("we've made it to model script", flush=True)
         frame = recv_conn.recv()
+        print("recieved a frame", flush=True)
         # method to skip processing frames if all model threads are currently working. delay is to force latency
         if model_runners <= numb_runners and delay_other_runners is False:
             Thread(target=_model_handler, args=(frame,)).start()
         else:
             pass
+        if result is not None:
+            print(result, flush=True)
+            send_conn.send(result)
+            result = None
     else:
         raise AttributeError("No Model instantiated to process frames with!")
 
-
+def test_func(recv_pipe):
+    while True:
+        print(recv_pipe.recv())
+        print("WE MADE IT", flush=True)
 # TODO, This needs to be a function, not a class
 class ModelHandler:
     def __init__(self, model, recv_conn, send_conn):

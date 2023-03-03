@@ -1,6 +1,6 @@
 from multiprocessing.managers import BaseManager
 
-from ModelHandler import model_handler
+from ModelHandler import model_handler, test_func
 # from TelloDriver import TelloDriver
 from VideoHandler import video_handler
 import tellopy
@@ -24,8 +24,11 @@ if __name__ == '__main__':
     # model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
 
     # # connect to drone to then create the video feed
+    # drone = tellopy.Tello()
     # drone.connect()
     # drone.wait_for_connection(60.0)
+    # item = drone.get_video_stream()
+
     drone = None
 
 
@@ -34,17 +37,18 @@ if __name__ == '__main__':
         # Creating seperate pipes to link frames to model and model to drone
     parent_conn_frame, child_conn_frame = multiprocessing.Pipe()
     parent_conn_results, child_conn_results = multiprocessing.Pipe()
+    print("diving in")
 
     # Create the three process that define the drone funciton
-    frame_process = multiprocessing.Process(target=video_handler, args=(drone, parent_conn_frame))
-    # model_process = multiprocessing.Process(target=model_handler(model, child_conn_frame, parent_conn_results))
-    # command_process = multiprocessing.Process(target=TelloDriver.main, args=(drone, child_conn_results))
+    frame_process = multiprocessing.Process(target=video_handler, args=(item, parent_conn_frame))
+    # model_process = multiprocessing.Process(target=model_handler, args=(model, child_conn_frame, parent_conn_results))
+    command_process = multiprocessing.Process(target=test_func, args=(child_conn_frame,))
 
     # begin and end the processes!
     frame_process.start()
     # model_process.start()
-    # command_process.start()
+    command_process.start()
 
     frame_process.join()
     # model_process.join()
-    # command_process.join()
+    command_process.join()
