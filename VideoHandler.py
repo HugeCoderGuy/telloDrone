@@ -7,7 +7,7 @@ import av
 import tellopy
 import numpy as np
 from threading import Thread
-import imutils
+# import imutils
 
 def video_handler(drone, send_conn):
     print("VIDEO HANDLER", flush=True)

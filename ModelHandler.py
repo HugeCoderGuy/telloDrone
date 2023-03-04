@@ -98,3 +98,4 @@ class ModelHandler:
                 pass
         else:
             raise AttributeError("No Model instantiated to process frames with!")
+        
