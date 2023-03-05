@@ -19,43 +19,47 @@ class Controller():
     def pause_after_call(self):
         time.sleep(4)
 
-    def start(self):
-        Thread(target=self.takeoff, args=()).start()
+    def takeoff(self):
+        def drone_takeoff(self):
+            self.stopped = True
+            self.drone.takeoff()
+            self.pause_after_call()
+            time.sleep(1)
+        Thread(target=drone_takeoff, args=(self,)).start()
         return self
 
-    def takeoff(self):
-        self.stopped = True
-        self.drone.takeoff()
-        self.pause_after_call()
         
         
     #TODO try fliping the drone with roll set to max value
+    
     def dodge_left(self):
-        self.drone.set_roll(-1)
-        time.sleep(.5)
-        self.drone.set_roll(0)
-        self.pause_after_call()
+        def drone_dodge_left(self):
+            self.drone.set_roll(-1)
+            time.sleep(.3)
+            self.drone.set_roll(0)
+            self.drone.flip_left()
+            self.pause_after_call()
 
-    def thread_dodge_left(self):
-        Thread(target=self.dodge_left, args=()).start()
+        Thread(target=drone_dodge_left, args=(self,)).start()
         return self
     
-    def dodge_right(self):
-        self.drone.set_roll(1)
-        time.sleep(.5)
-        self.drone.set_roll(0)
-        self.pause_after_call()
 
-    def thread_dodge_right(self):
-        Thread(target=self.dodge_right, args=()).start()
+    def dodge_right(self):
+        def drone_dodge_right(self):
+            self.drone.set_roll(1)
+            time.sleep(.3)
+            self.drone.set_roll(0)
+            self.pause_after_call()
+            
+        Thread(target=drone_dodge_right, args=(self,)).start()
         return self
     
     def dodge_up(self):
         def drone_jump(self):
             self.drone.set_throttle(1)
-            time.sleep(1)
+            time.sleep(.35)
             self.drone.set_throttle(-1)
-            time.sleep(.5)
+            time.sleep(.25)
             self.drone.set_throttle(0)
             self.pause_after_call()
         
@@ -67,7 +71,7 @@ class Controller():
             self.drone.forward(10)
             self.pause_after_call()
             
-        Thread(target=self.drone_forward, args=(self,)).start()
+        Thread(target=drone_forward, args=(self,)).start()
         return self
     
     def go_backward(self):
@@ -75,7 +79,7 @@ class Controller():
             self.drone.backward(10)
             self.pause_after_call()
             
-        Thread(target=self.drone_backward, args=(self,)).start()
+        Thread(target=drone_backward, args=(self,)).start()
         return self
     
     def clockwise(self):
@@ -91,14 +95,28 @@ class Controller():
             self.pause_after_call()
             
         Thread(target=drone_counter_clockwise, args=(self,)).start()
-
-    def land(self):
-        self.drone.land()
-        self.pause_after_call()
         
-    def stop(self):
-        self.stopped = True
-        Thread(target=self.land, args=()).start()
+    def up(self):
+        def drone_up(self):
+            self.drone.up(10)
+            self.pause_after_call()
+            
+        Thread(target=drone_up, args=(self,)).start()
+        
+    def down(self):
+        def drone_down(self):
+            self.drone.down(10)
+            self.pause_after_call()
+            
+        Thread(target=drone_down, args=(self,)).start()
+        
+    def land(self):
+        def drone_land(self):
+            self.drone.land()
+            self.pause_after_call()
+            self.stopped = True
+            
+        Thread(target=drone_land, args=()).start()
         return self
 
 

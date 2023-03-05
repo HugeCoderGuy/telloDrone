@@ -2,6 +2,7 @@ import torch
 import time
 from threading import Thread
 from ball_speed_methods import measure_ball
+from DroneEnum import DroneEnum
 
 delay_other_runners = False
 model_runners = 0
@@ -40,10 +41,14 @@ def model_handler(model, recv_conn, send_conn):
     else:
         raise AttributeError("No Model instantiated to process frames with!")
 
-def test_func(recv_pipe):
-    while True:
-        print(recv_pipe.recv())
-        print("WE MADE IT", flush=True)
+def test_func(state, go):
+    while go.value != 1:
+        time.sleep(.1)
+    time.sleep(5)
+    for drone_state in DroneEnum:
+        print(f"STATE IS: {drone_state.name} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", flush=True)
+        state.value = drone_state.value
+        time.sleep(6)
 # TODO, This needs to be a function, not a class
 class ModelHandler:
     def __init__(self, model, recv_conn, send_conn):

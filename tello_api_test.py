@@ -16,7 +16,7 @@ def test():
         drone.connect()
         drone.wait_for_connection(60.0)
         drone.takeoff()
-        sleep(4)
+        sleep(10)
         drone.flip_back()
 
         drone.flip_backright()
