@@ -3,45 +3,40 @@ import time
 from threading import Thread
 from ball_speed_methods import measure_ball
 from DroneEnum import DroneEnum
-
-delay_other_runners = False
-model_runners = 0
-result = None
+from queue import Queue
+from TelloDriver import TelloDriver
 
 
-def model_handler(model, recv_conn, send_conn):
-    global delay_other_runners
-    global model_runners
-    runner_delay = .3
-    global result
-    numb_runners = 8
 
-    def _model_handler(frame):
-        model_runners += 1
-        delay_other_runners = True
-        time.sleep(runner_delay)
-        delay_other_runners = False
-        result = measure_ball(frame, model, False)
-        model_runners -= 1
-
+def model_handler(model, recv_conn, drone_state):
+    modelhandler = ModelHandler(model, recv_conn)
+    frame = recv_conn.recv()
+    tellodriver = TelloDriver(frame)
 
     while True:
-        print("we've made it to model script", flush=True)
-        frame = recv_conn.recv()
-        print("recieved a frame", flush=True)
-        # method to skip processing frames if all model threads are currently working. delay is to force latency
-        if model_runners <= numb_runners and delay_other_runners is False:
-            Thread(target=_model_handler, args=(frame,)).start()
-        else:
+        modelhandler.run_model()
+        if modelhandler.is_empty():
             pass
-        if result is not None:
-            print(result, flush=True)
-            send_conn.send(result)
-            result = None
-    else:
-        raise AttributeError("No Model instantiated to process frames with!")
+        else:
+            result = modelhandler.get_result()
+            tellodriver.update_object_variables(result)
+            dodge_cmd = tellodriver.dodge_ball()
+            if dodge_cmd:
+                drone_state.value = dodge_cmd
+                # make sure nothing interrupts the dodge call!
+                time.sleep(5)
+            
+            drone_state.value = tellodriver.follow_face()
+
+            
 
 def test_func(state, go):
+    """Periodically sends commands to Drone process to confirm that it works
+
+    Args:
+        state (_type_): Drone State
+        go (_type_): flag from drone process on when to start running models
+    """
     while go.value != 1:
         time.sleep(.1)
     time.sleep(5)
@@ -50,11 +45,13 @@ def test_func(state, go):
         state.value = drone_state.value
         time.sleep(6)
 # TODO, This needs to be a function, not a class
+
+
 class ModelHandler:
-    def __init__(self, model, recv_conn, send_conn):
+    def __init__(self, model, recv_conn):
         self.model = model
         self.recv_conn = recv_conn
-        self.send_conn = send_conn
+        self.result = Queue(maxsize = 10)
 
         self.stopped = False
         self.model_runners = 0
@@ -68,6 +65,12 @@ class ModelHandler:
             self.runner_going = 100*[None]
             self.counter = 0
             self.runner_id = 0
+            
+    def get_result(self):
+        return self.result.get()
+    
+    def is_empty(self):
+        return self.result.empty()
 
     def model_handler(self, frame, runner_id=0):
         self.model_runners += 1
@@ -77,12 +80,13 @@ class ModelHandler:
             self.counter += 1
         time.sleep(self.runner_delay)
         self.delay_other_runners = False
-        result = measure_ball(frame, self.model, False)
+        detections = self.model(frame[..., ::-1])
+        result = detections.pandas().xyxy[0].to_dict(orient="records")
+        self.result.put(result)
         if self.debug:
             self.runner_going[self.counter] = (runner_id, False)
             self.counter += 1
         self.model_runners -= 1
-        self.send_conn.send(result)
 
     def run_model(self):
         frame = self.recv_conn.recv()

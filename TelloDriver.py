@@ -1,16 +1,16 @@
 import torch
 import cv2
 import asyncio
-from tello_asyncio import Tello, VIDEO_URL, Vector
 from collections import deque
 from ball_speed_methods import average, calc_speed, pixels_to_speed, distance_finder, focal_length, measure_ball, distance_from_between_points
 import time
 from Controller import Controller
+from DroneEnum import DroneEnum
 
 
 #TODO Make sure the .main() has a finally statement that closes out the drone connection
-class TelloDriver(Controller):
-    def __init__(self, drone, recv_conn):
+class TelloDriver():
+    def __init__(self, frame):
         """Class to encapsulate Tello object w/ its corresponding ML model
 
         Model is based on Yolov7 w/ training data created by me with images and
@@ -20,9 +20,7 @@ class TelloDriver(Controller):
         Note, delay in TCP video connection often causes ~1s delay in video feed.
         So, don't throw the ball to hard at the little guy!
         """
-        super().__init__(drone)
         # pipe connection to recieve model results
-        self.recv_conn = recv_conn
 
         self.im_center = {'x': (w/2), 'y': (h/2)}
 
@@ -41,6 +39,7 @@ class TelloDriver(Controller):
         # ball variables
         self.ball_size
         self.ball_location
+        self.tennisball_in_frame = False
 
         # variables for ball trackig
         self.last_dist = {'x': 0, 'y': 0, 'z': 0}
@@ -53,24 +52,20 @@ class TelloDriver(Controller):
         self.avg_speed = {'x': 0, 'y': 0, 'z': 0}
 
 
-    def update_object_variables(self):
+    def update_object_variables(self, results):
         """Updates internal variables tracking faces and or tennis balls
 
         measurements are mildly averaged to handle noise and occasional
         misidentificaitons with model. These internal variables are then used
         in the actions function to drive the Tello api calls
         """
-        #TODO update sample time locations
 
         # process frame w/ model
-        frame = self.cap.read()
         self.time_tracker.appendleft(time.time())
-        detections = self.model(frame[..., ::-1])
-        results = detections.pandas().xyxy[0].to_dict(orient="records")
 
         # process items found in frame
         face_counter = 0
-        tennisball_in_frame = False
+        self.tennisball_in_frame = False
         if len(results) > 0:
             for result in results:
                 # filter bad results
@@ -78,7 +73,7 @@ class TelloDriver(Controller):
                     
                     # Tennis ball calcs and identification
                     if result['name'] == 'Tennis-Ball':
-                        tennisball_in_frame = True
+                        self.tennisball_in_frame = True
                         measured_width_ball = int(result['xmax']) - int(result['xmin'])
                         measured_height_ball = int(result['ymax']) - int(result['ymin'])
                         # ball should be in square bound box. take average for ~ square dims in pixels
@@ -132,7 +127,7 @@ class TelloDriver(Controller):
                         face_counter += 1
                         print("Troubleshooting. Face size is: ", self.face_size)
 
-            if not tennisball_in_frame:
+            if not self.tennisball_in_frame:
                 self.avg_speed['z'] = 0
                 self.avg_speed['x'] = 0
                 self.avg_speed['y'] = 0
@@ -147,55 +142,42 @@ class TelloDriver(Controller):
         """
         face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
                             'y':(self.face_location['y'] - self.im_center['y'])}
-        dist_to_move = {'x':0, 'y':0, 'z':0}
 
         # turn towards face direciton
         if face_from_center['x'] > 20:
-            asyncio.run(self.rotate_clockwise(5))
+            return DroneEnum.counter_clockwise.value
         elif face_from_center['x'] < 20:
-            asyncio.run(self.rotate_c_clockwise(5))
+            return DroneEnum.counter_clockwise.value
             
         # adujust x coord based on face distance
         if self.face_x_dist <= 2.25:
-            dist_to_move['x'] = -20
+            return DroneEnum.backward.value
         elif self.face_x_dist >= 2.75:
-            dist_to_move['x'] = 20
+            return DroneEnum.forward.value
             
         # adjust y coords based on pixels
         if -face_from_center['y'] >= 30: # y coords are inversed in frame measures
-            dist_to_move['y'] = -20
+            return DroneEnum.down.value
         elif -face_from_center['y'] <= 30:
-            dist_to_move['y'] = 20
+            return DroneEnum.up.value
+        
+        # everything else checks out, don't send any tello commands
+        return 0
             
-        self.tello.got_to(relative_position=Vector(dist_to_move['x'], # POTENTIALLY MAKE THIS A AWAIT FUNCITON
-                                                   dist_to_move['y'],
-                                                   dist_to_move['z']), speed=40)
-                    
-
+                
     def dodge_ball(self):
-        # TODO vector call to move thee drone and maybe make a vector function to move it
         if self.last_dist['z'] <= 3 and self.avg_speed['z'] > 1:
             ball_from_center = {'x': (self.ball_location['x'] - self.im_center['x']),
                                 'y': (self.ball_location['y'] - self.im_center['y'])}
-            # upper left
-            if ball_from_center['x'] < 0 and ball_from_center['y'] > 0: # vector move?
-            # lower left
-            if ball_from_center['x'] < 0 and ball_from_center['y'] < 0: # vector move?
-            # upper right
-            if ball_from_center['x'] > 0 and ball_from_center['y'] > 0:  # vector move?
-            # lower right
-            if ball_from_center['x'] > 0 and ball_from_center['y'] < 0:  # vector move?
+            if (ball_from_center['x'] < 50 and ball_from_center['x'] > -50) and ball_from_center['y'] < 50:
+                return DroneEnum.dodge_up.value
+            if ball_from_center['x'] < 0:
+                return DroneEnum.dodge_right.value
+            if ball_from_center['x'] > 0:
+                return DroneEnum.dodge_left.value
+            
+        # default
+        return 0
 
-    def main(self):
-        try:
-            self.update_object_variables()
-            self.dodge_ball()
-            self.follow_face()
-        finally:
-            # TODO have drone land
-        """Rough Drone statemachine"""
-        self.update_object_variables()
-        self.follow_face()
-        self.dodge_ball()
 
 

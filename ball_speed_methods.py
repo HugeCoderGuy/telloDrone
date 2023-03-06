@@ -2,7 +2,7 @@ from collections import deque
 import cv2 as cv
 import math
 
-BALL_WIDTH = 6.6  # cm
+BALL_WIDTH = 6.6  # cm <- potentially change this
 
 
 # takes frame and then returns any tennis ball locations
