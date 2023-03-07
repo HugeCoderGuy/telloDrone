@@ -20,8 +20,7 @@ class TelloDriver():
         Note, delay in TCP video connection often causes ~1s delay in video feed.
         So, don't throw the ball to hard at the little guy!
         """
-        # pipe connection to recieve model results
-
+        h, w = frame.shape[:2]
         self.im_center = {'x': (w/2), 'y': (h/2)}
 
         self.time_tracker = deque([time.time()])
@@ -132,13 +131,14 @@ class TelloDriver():
                 self.avg_speed['x'] = 0
                 self.avg_speed['y'] = 0
 
-    def follow_face(self):
-        """Funciton to handle how the Tello tracks and follows in frame face
+    def follow_face(self) -> int:
+        """Follows face closest to center of screen
+        
+        .update_object_variables() filters faces that are further from
+        the center of the screen. 
 
-        Tello will favor the face closest to the center of the screen to handle
-        cases where multiple people are seen in frame. .follow_face() will have
-        lower priority than dodge ball. Prioirty is implemented with order of TCP
-        calls resulting in tello only listenting to most recent call
+        Returns:
+            int: value corresponding to Drone action enum
         """
         face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
                             'y':(self.face_location['y'] - self.im_center['y'])}
@@ -165,7 +165,12 @@ class TelloDriver():
         return 0
             
                 
-    def dodge_ball(self):
+    def dodge_ball(self) -> int:
+        """Uses internal variables to tell drone to dodge or not
+
+        Returns:
+            int: returns value corresponding with drone commands Enum
+        """
         if self.last_dist['z'] <= 3 and self.avg_speed['z'] > 1:
             ball_from_center = {'x': (self.ball_location['x'] - self.im_center['x']),
                                 'y': (self.ball_location['y'] - self.im_center['y'])}

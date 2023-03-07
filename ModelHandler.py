@@ -5,15 +5,35 @@ from ball_speed_methods import measure_ball
 from DroneEnum import DroneEnum
 from queue import Queue
 from TelloDriver import TelloDriver
+import multiprocessing
 
 
+def model_handler(model, recv_conn: multiprocessing.Pipe, 
+                  drone_state: multiprocessing.Value, go: multiprocessing.value,
+                  stop: multiprocessing.Value):
+    """Multiprocess.process handling the YoloV7 model
+    
+    Handler takes frames from video/drone process, passes them
+    through the model and then processes the results. The drone
+    commands are shared through drone_state.value to the other
+    process that then drives the tello api
 
-def model_handler(model, recv_conn, drone_state):
+    Args:
+        model (torch.model): Yolov7 model trained for balls & faces
+        recv_conn (multiprocessing.Pipe): Drone/Video process
+        drone_state (multiprocessing.Value): drone state that drives aciton
+        go (multiprocessing.Value): a synchronizing int to prevent early instantiation
+    """
+    
+    # delay instantiation of models and processing
+    while go.value != 1:
+        time.sleep(.5)
+        
     modelhandler = ModelHandler(model, recv_conn)
     frame = recv_conn.recv()
     tellodriver = TelloDriver(frame)
 
-    while True:
+    while stop.value != 1:
         modelhandler.run_model()
         if modelhandler.is_empty():
             pass
@@ -21,11 +41,12 @@ def model_handler(model, recv_conn, drone_state):
             result = modelhandler.get_result()
             tellodriver.update_object_variables(result)
             dodge_cmd = tellodriver.dodge_ball()
+            # dodge command is processed first
             if dodge_cmd:
                 drone_state.value = dodge_cmd
                 # make sure nothing interrupts the dodge call!
                 time.sleep(5)
-            
+            # if no dodge, allow drone to follow the face
             drone_state.value = tellodriver.follow_face()
 
             
@@ -48,7 +69,17 @@ def test_func(state, go):
 
 
 class ModelHandler:
-    def __init__(self, model, recv_conn):
+    def __init__(self, model, recv_conn:multiprocessing.Pipe):
+        """Class to encapsulate the model threads
+        
+        Handles the models running in the background with synchronized
+        threads adding their results to a queue. The queue is then 
+        processed in by the TelloDriver class to identify action
+
+        Args:
+            model (torch.model): Yolov7 Model
+            recv_conn (multiprocessing.Pipe): connection to drone/video process
+        """
         self.model = model
         self.recv_conn = recv_conn
         self.result = Queue(maxsize = 10)

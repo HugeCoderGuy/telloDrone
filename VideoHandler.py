@@ -9,9 +9,23 @@ import numpy as np
 from threading import Thread
 from Controller import Controller
 from DroneEnum import DroneEnum
+import multiprocessing
 
 
-def video_handler(drone, send_conn, state, go):
+def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value, 
+                  go: multiprocessing.Value, stop: multiprocessing.Value):
+    """Video/Drone process handling video feed and tello api calls
+    
+    Tello commands are filtered through wrapper class Controller.
+    The video feed runs in the background as a thread to ensure that
+    the frames don't lag.
+
+    Args:
+        send_conn (multiprocessing.Pipe): Pipe to model process sending frames
+        state (multiprocessing.Value): current drone state shared as an int
+        go (multiprocessing.Value): A flag shared between process to synchronize
+        stop (multiprocessing.Value): indicator to end the process
+    """
     drone = tellopy.Tello()
     drone.connect()
     drone.wait_for_connection(60.0)
@@ -28,15 +42,17 @@ def video_handler(drone, send_conn, state, go):
             except av.AVError as ave:
                 print(ave, flush=True)
                 print('retry...', flush=True)
-               
+
         controller = Controller(drone)
         controller.takeoff()
         backgroundframe = BackgroundFrameRead(container)
         backgroundframe.start()
         time.sleep(4)
+        
+        # allow model process to begin
         go.value = 1
         counter = 0
-        while True:
+        while stop != 1:
             cv2.imshow('Tello View', backgroundframe.frame)
             cv2.waitKey(1)
             counter += 1
@@ -68,37 +84,22 @@ def video_handler(drone, send_conn, state, go):
                 case DroneEnum.down.value:
                     controller.down()
                     state.value = 0
-                    
+                # if no commands, state = 0 and wildcard catches with pass
                 case _:
-                    pass
-            
-                        
-            # finally:
-            #     controller.land()
-            #     cv2.destroyAllWindows()
-                
+                    pass                
                     
-            
-
-
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_exception(exc_type, exc_value, exc_traceback)
         print(ex)
+            
     finally:
+        backgroundframe.stop()
+        controller.land()
         cv2.destroyAllWindows()
+        # add a sleep command to ensure drone finishes landing
+        time.sleep(3)
 
-# def get_frame_read(self) -> 'BackgroundFrameRead':
-#     """Get the BackgroundFrameRead object from the camera drone. Then, you just need to call
-#     backgroundFrameRead.frame to get the actual frame received by the drone.
-#     Returns:
-#         BackgroundFrameRead
-#     """
-#     if self.background_frame_read is None:
-#         address = self.get_udp_video_address()
-#         self.background_frame_read = BackgroundFrameRead(self, address)
-#         self.background_frame_read.start()
-#     return self.background_frame_read
 
 class BackgroundFrameRead:
     """
@@ -109,24 +110,6 @@ class BackgroundFrameRead:
     def __init__(self, container):
         self.frame = np.zeros([300, 400, 3], dtype=np.uint8)
         self.container = container
-
-        # Try grabbing frame with PyAV
-        # According to issue #90 the decoder might need some time
-        # https://github.com/damiafuentes/DJITelloPy/issues/90#issuecomment-855458905
-        # try:
-        #     retry = 3
-        #     container = None
-        #     while container is None and 0 < retry:
-        #         retry -= 1
-        #         try:
-        #             self.container = av.open(drone.get_video_stream())
-        #         except av.AVError as ave:
-        #             print(ave, flush=True)
-        #             print('retry...', flush=True)
-        # except Exception as ex:
-        #     exc_type, exc_value, exc_traceback = sys.exc_info()
-        #     traceback.print_exception(exc_type, exc_value, exc_traceback)
-        #     print(ex)
 
         self.stopped = False
         self.worker = Thread(target=self.update_frame, args=(), daemon=True)
