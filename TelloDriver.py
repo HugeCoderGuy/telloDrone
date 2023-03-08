@@ -36,8 +36,7 @@ class TelloDriver():
         self.real_ball_size = 6.3 # cm
 
         # ball variables
-        self.ball_size
-        self.ball_location
+        self.ball_location = {'x': 0, 'y': 0}
         self.tennisball_in_frame = False
 
         # variables for ball trackig
