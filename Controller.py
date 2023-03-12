@@ -28,14 +28,12 @@ class Controller():
         Thread(target=drone_takeoff, args=(self,)).start()
         return self
 
-        
-        
     #TODO try fliping the drone with roll set to max value
     
     def dodge_left(self):
         def drone_dodge_left(self):
             self.drone.set_roll(-1)
-            time.sleep(.3)
+            time.sleep(.5)
             self.drone.set_roll(0)
             self.drone.flip_left()
             self.pause_after_call()
@@ -47,7 +45,7 @@ class Controller():
     def dodge_right(self):
         def drone_dodge_right(self):
             self.drone.set_roll(1)
-            time.sleep(.3)
+            time.sleep(.5)
             self.drone.set_roll(0)
             self.pause_after_call()
             

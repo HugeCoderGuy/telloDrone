@@ -6,10 +6,11 @@ from DroneEnum import DroneEnum
 from queue import Queue
 from TelloDriver import TelloDriver
 import multiprocessing
+import cv2
 
 
 def model_handler(model, recv_conn: multiprocessing.Pipe, 
-                  drone_state: multiprocessing.Value, go: multiprocessing.value,
+                  drone_state: multiprocessing.Value, go: multiprocessing.Value,
                   stop: multiprocessing.Value):
     """Multiprocess.process handling the YoloV7 model
     
@@ -29,47 +30,33 @@ def model_handler(model, recv_conn: multiprocessing.Pipe,
     while go.value != 1:
         time.sleep(.5)
         
-    modelhandler = ModelHandler(model, recv_conn)
     frame = recv_conn.recv()
     tellodriver = TelloDriver(frame)
+    modelhandler = ModelHandler(model, recv_conn, frame)
 
-    while stop.value != 1:
-        modelhandler.run_model()
-        if modelhandler.is_empty():
-            pass
-        else:
-            result = modelhandler.get_result()
-            tellodriver.update_object_variables(result)
-            dodge_cmd = tellodriver.dodge_ball()
-            # dodge command is processed first
-            if dodge_cmd:
-                drone_state.value = dodge_cmd
-                # make sure nothing interrupts the dodge call!
-                time.sleep(5)
-            # if no dodge, allow drone to follow the face
-            drone_state.value = tellodriver.follow_face()
-
-            
-
-def test_func(state, go):
-    """Periodically sends commands to Drone process to confirm that it works
-
-    Args:
-        state (_type_): Drone State
-        go (_type_): flag from drone process on when to start running models
-    """
-    while go.value != 1:
-        time.sleep(.1)
-    time.sleep(5)
-    for drone_state in DroneEnum:
-        print(f"STATE IS: {drone_state.name} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", flush=True)
-        state.value = drone_state.value
-        time.sleep(6)
-# TODO, This needs to be a function, not a class
+    try:
+        while stop.value != 1:
+            modelhandler.run_model()
+            if modelhandler.is_empty():
+                pass
+            else:
+                result = modelhandler.get_result()
+                tellodriver.update_object_variables(result)
+                dodge_cmd = tellodriver.dodge_ball()
+                # dodge command is processed first
+                if dodge_cmd:
+                    drone_state.value = dodge_cmd
+                    # make sure nothing interrupts the dodge call!
+                    time.sleep(5)
+                # if no dodge, allow drone to follow the face
+                drone_state.value = tellodriver.follow_face()
+                
+    finally:
+        modelhandler.end()
 
 
 class ModelHandler:
-    def __init__(self, model, recv_conn:multiprocessing.Pipe):
+    def __init__(self, model, recv_conn:multiprocessing.Pipe, frame):
         """Class to encapsulate the model threads
         
         Handles the models running in the background with synchronized
@@ -96,6 +83,11 @@ class ModelHandler:
             self.runner_going = 100*[None]
             self.counter = 0
             self.runner_id = 0
+            
+        # video saving object for run_model
+        _fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+        h, w = frame.shape[:2] # <----------TODO Check this line
+        self._out = cv2.VideoWriter('tello_video.mp4', _fourcc, 20.0, (w, h)) # (640,480))
             
     def get_result(self):
         return self.result.get()
@@ -138,4 +130,36 @@ class ModelHandler:
                 pass
         else:
             raise AttributeError("No Model instantiated to process frames with!")
+        if self.result:
+            for result in self.result:
+                if result['name'] == 'Tennis-Ball':
+                    # start, end piont, color (BGR), thickness
+                    frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
+                                          (result['xmax'], result['ymax']), 
+                                          (0, 0, 255), 2)
+                if result['name'] == 'face':
+                    # start, end piont, color (BGR), thickness
+                    frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
+                                          (result['xmax'], result['ymax']), 
+                                          (0, 255, 0), 2)
+        self._out.write(frame)
         
+    def end(self):
+        self._out.release()
+        
+
+def test_func(state, go):
+    """Periodically sends commands to Drone process to confirm that it works
+
+    Args:
+        state (_type_): Drone State
+        go (_type_): flag from drone process on when to start running models
+    """
+    while go.value != 1:
+        time.sleep(.1)
+    time.sleep(5)
+    for drone_state in DroneEnum:
+        print(f"STATE IS: {drone_state.name} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", flush=True)
+        state.value = drone_state.value
+        time.sleep(6)
+

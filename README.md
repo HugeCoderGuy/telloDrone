@@ -1,7 +1,7 @@
 
 <h1 align="center">
   <br>
-  <a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://raw.githubusercontent.com/amitmerchant1990/electron-markdownify/master/app/img/markdownify.png" alt="Markdownify" width="200"></a>
+  <a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://www.google.com/imgres?imgurl=https%3A%2F%2Fi0.wp.com%2Fneptune.ai%2Fwp-content%2Fuploads%2F2022%2F10%2Fdrones-project-workflow.png%3Fresize%3D768%252C442%26ssl%3D1&imgrefurl=https%3A%2F%2Fneptune.ai%2Fblog%2Fbuilding-a-facemask-surveillance-system-with-drone-technology&tbnid=bFuwg8UZ7cn1CM&vet=12ahUKEwjBhoHH2dT9AhWLM0QIHZ9JAc8QMygLegUIARDYAQ..i&docid=toe3pJH1nhIPxM&w=768&h=442&q=tello%20drone%20face%20following&client=firefox-b-1-e&ved=2ahUKEwjBhoHH2dT9AhWLM0QIHZ9JAc8QMygLegUIARDYAQ" alt="Markdownify" width="200"></a>
   <br>
   Alex's Drone
   <br>
@@ -19,7 +19,7 @@
       <img src="https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg">
   </a>
   <a href="https://www.paypal.me/AmitMerchant">
-    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white">
+    <img src="![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)">
   </a>
 </p>
 
@@ -39,30 +39,26 @@
 * Implementation of light YOLOV7 Object Detection ML model
 * Multiprocessing to decrease latency between computationally heavy processes
 * Threading to maintian concurrency between video and command operations
-* Tello drone API wrapper to allow for specific functionality
+* Tello drone API wrapper to allow for unique and reliable actions
 * A drone that reliably dodges tennis balls and follows faces!
 
 ## How To Use
 
-To clone and run this application, you'll need [Git](https://git-scm.com) and [Node.js](https://nodejs.org/en/download/) (which comes with [npm](http://npmjs.com)) installed on your computer. From your command line:
+To clone and run this application, you'll need [Git](https://git-scm.com). From your command line:
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/amitmerchant1990/electron-markdownify
+$ git clone https://github.com/HugeCoderGuy/telloDrone
 
 # Go into the repository
 $ cd electron-markdownify
 
 # Install dependencies
-$ npm install
+$ pip install -r requirements.txt
 
 # Run the app
-$ npm start
+$ python main.py
 ```
-
-> **Note**
-> If you're using Linux Bash for Windows, [see this guide](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/) or use `node` from the command prompt.
-
 
 
 ## License

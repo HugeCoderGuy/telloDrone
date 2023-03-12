@@ -22,22 +22,8 @@ import multiprocessing
 
 # TODO include "yolov7/best.pt"
 if __name__ == '__main__':
-    # BaseManager.register("Tello", tellopy.Tello)
-    # manager = BaseManager()
-    # manager.start()
-    # drone = manager.Tello()
-    # drone.toggle_fast_mode()
     # model = torch.hub.load('WongKinYiu/yolov7', 'custom', 'yolov7/best.pt')
 
-    # # connect to drone to then create the video feed
-    # drone = tellopy.Tello()
-    # drone.connect()
-    # drone.wait_for_connection(60.0)
-    # item = drone.get_video_stream()
-
-
-    # with multiprocessing.Manager() as manager:
-        # Creating seperate pipes to link frames to model and model to drone
     parent_conn_frame, child_conn_frame = multiprocessing.Pipe()
     parent_conn_results, child_conn_results = multiprocessing.Pipe()
     

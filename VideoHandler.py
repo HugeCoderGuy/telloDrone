@@ -51,11 +51,10 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
         
         # allow model process to begin
         go.value = 1
-        counter = 0
         while stop != 1:
             cv2.imshow('Tello View', backgroundframe.frame)
             cv2.waitKey(1)
-            counter += 1
+            # process is to iterate through state value, act on it, then reset state
             match state.value:
                 case DroneEnum.dodge_left.value:
                     controller.dodge_left()
