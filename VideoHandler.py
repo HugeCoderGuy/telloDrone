@@ -55,37 +55,40 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
             cv2.imshow('Tello View', backgroundframe.frame)
             cv2.waitKey(1)
             # process is to iterate through state value, act on it, then reset state
-            match state.value:
-                case DroneEnum.dodge_left.value:
-                    controller.dodge_left()
-                    state.value = 0
-                case DroneEnum.dodge_right.value:
-                    controller.dodge_right()
-                    state.value = 0
-                case DroneEnum.dodge_up.value:
-                    controller.dodge_up()
-                    state.value = 0
-                case DroneEnum.forward.value:
-                    controller.go_forward()
-                    state.value = 0
-                case DroneEnum.backward.value:
-                    controller.go_backward()
-                    state.value = 0
-                case DroneEnum.clockwise.value:
-                    controller.clockwise()
-                    state.value = 0
-                case DroneEnum.counter_clockwise.value:
-                    controller.counter_clockwise()
-                    state.value = 0
-                case DroneEnum.up.value:
-                    controller.up()
-                    state.value = 0
-                case DroneEnum.down.value:
-                    controller.down()
-                    state.value = 0
-                # if no commands, state = 0 and wildcard catches with pass
-                case _:
-                    pass                
+            try:
+                match state.value:
+                    case DroneEnum.dodge_left.value:
+                        controller.dodge_left()
+                        state.value = 0
+                    case DroneEnum.dodge_right.value:
+                        controller.dodge_right()
+                        state.value = 0
+                    case DroneEnum.dodge_up.value:
+                        controller.dodge_up()
+                        state.value = 0
+                    case DroneEnum.forward.value:
+                        controller.go_forward()
+                        state.value = 0
+                    case DroneEnum.backward.value:
+                        controller.go_backward()
+                        state.value = 0
+                    case DroneEnum.clockwise.value:
+                        controller.clockwise()
+                        state.value = 0
+                    case DroneEnum.counter_clockwise.value:
+                        controller.counter_clockwise()
+                        state.value = 0
+                    case DroneEnum.up.value:
+                        controller.up()
+                        state.value = 0
+                    case DroneEnum.down.value:
+                        controller.down()
+                        state.value = 0
+                    # if no commands, state = 0 and wildcard catches with pass
+                    case _:
+                        pass
+            except Ex as ex:
+                state.value = 0
                     
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
