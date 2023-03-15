@@ -87,7 +87,7 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
                     # if no commands, state = 0 and wildcard catches with pass
                     case _:
                         pass
-            except Ex as ex:
+            except:
                 state.value = 0
                     
     except Exception as ex:
