@@ -11,6 +11,8 @@ from Controller import Controller
 from DroneEnum import DroneEnum
 import multiprocessing
 
+# https://github.com/darkskyapp/forecast-ruby/issues/13 <---- threading issue needs to be documented
+
 
 def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value, 
                   go: multiprocessing.Value, stop: multiprocessing.Value):
@@ -31,6 +33,7 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
     drone.wait_for_connection(60.0)
     # drone.toggle_fast_mode()
     # drone.set_att_limit(10)
+    print('connected to drone', flush=True)
 
     try:
         retry = 3
@@ -42,6 +45,7 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
             except av.AVError as ave:
                 print(ave, flush=True)
                 print('retry...', flush=True)
+
 
         controller = Controller(drone)
         controller.takeoff()
@@ -56,6 +60,7 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
             cv2.waitKey(1)
             # process is to iterate through state value, act on it, then reset state
             try:
+                print(state.value, flush=True)
                 match state.value:
                     case DroneEnum.dodge_left.value:
                         controller.dodge_left()
