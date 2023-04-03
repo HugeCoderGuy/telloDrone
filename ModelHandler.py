@@ -10,7 +10,7 @@ import cv2
 
 
 def model_handler(model, recv_conn: multiprocessing.Pipe, 
-                  drone_state: multiprocessing.Value, go: multiprocessing.Value,
+                  drone_state: multiprocessing.Queue, go: multiprocessing.Value,
                   stop: multiprocessing.Value):
     """Multiprocess.process handling the YoloV7 model
     
@@ -41,22 +41,25 @@ def model_handler(model, recv_conn: multiprocessing.Pipe,
                 pass
             else:
                 result = modelhandler.get_result()
-                tellodriver.update_object_variables(result)
-                dodge_cmd = tellodriver.dodge_ball()
-                # dodge command is processed first
-                if dodge_cmd:
-                    drone_state.value = dodge_cmd
-                    # make sure nothing interrupts the dodge call!
-                    time.sleep(5)
-                # if no dodge, allow drone to follow the face
-                drone_state.value = tellodriver.follow_face()
+                if result:
+                    print(type(result), flush=True)
+                    print(result)
+                    tellodriver.update_object_variables(result)
+                    # dodge_cmd = tellodriver.dodge_ball()
+                    # # dodge command is processed first
+                    # if dodge_cmd:
+                    #     drone_state.put(dodge_cmd)
+                    #     # make sure nothing interrupts the dodge call!
+                    #     time.sleep(5)
+                    # if no dodge, allow drone to follow the face
+                    drone_state.put(tellodriver.follow_face())
                 
     finally:
         modelhandler.end()
 
 
 class ModelHandler:
-    def __init__(self, model, recv_conn:multiprocessing.Pipe, frame):
+    def __init__(self, model, recv_conn: multiprocessing.Pipe, frame):
         """Class to encapsulate the model threads
         
         Handles the models running in the background with synchronized
@@ -69,13 +72,13 @@ class ModelHandler:
         """
         self.model = model
         self.recv_conn = recv_conn
-        self.result = Queue(maxsize = 10)
+        self.result = Queue(maxsize=10)
 
         self.stopped = False
         self.model_runners = 0
         self.delay_other_runners = False
-        self.runner_delay = .3
-        self.numb_runners = 8
+        self.runner_delay = 1.5
+        self.numb_runners = 3
 
         self.debug = False
         if self.debug:
@@ -85,27 +88,36 @@ class ModelHandler:
             self.runner_id = 0
             
         # video saving object for run_model
-        _fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        h, w = frame.shape[:2] # <----------TODO Check this line
-        self._out = cv2.VideoWriter('tello_video.mp4', _fourcc, 20.0, (w, h)) # (640,480))
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        self._out = cv2.VideoWriter('tello_video.avi', fourcc, 20.0, (1280, 720)) # (640,480))
             
     def get_result(self):
-        return self.result.get()
+        if not self.result.empty():
+            return self.result.get()
+        else:
+            return False
     
     def is_empty(self):
         return self.result.empty()
 
+    def toggle_runner_delay(self, delay):
+        self.delay_other_runners = True
+        time.sleep(delay)
+        self.delay_other_runners = False
+
     def model_handler(self, frame, runner_id=0):
         self.model_runners += 1
-        self.delay_other_runners = True
         if self.debug:
             self.runner_going[self.counter] = (runner_id, True)
             self.counter += 1
-        time.sleep(self.runner_delay)
-        self.delay_other_runners = False
+        self.delay_other_runners = True
         detections = self.model(frame[..., ::-1])
+        self.delay_other_runners = False
         result = detections.pandas().xyxy[0].to_dict(orient="records")
-        self.result.put(result)
+        if result != []:
+            if self.debug:
+                result[0]['runner_id'] = runner_id
+            self.result.put(result)
         if self.debug:
             self.runner_going[self.counter] = (runner_id, False)
             self.counter += 1
@@ -117,31 +129,39 @@ class ModelHandler:
             # method to skip processing frames if all model threads are currently working. delay is to force latency
             if self.model_runners <= self.numb_runners and self.delay_other_runners is False:
                 if self.debug:
-                    if self.runner_id == self.numb_runners:
-                        self.runner_id = 0
+                    # if self.runner_id == self.numb_runners:
+                    #     self.runner_id = 0
 
-                    Thread(target=self.model_handler, args=(frame, self.runner_id)).start()
+                    Thread(target=self.model_handler, args=(frame, self.runner_id,)).start()
+                    Thread(target=self.toggle_runner_delay, args=(self.runner_delay,)).start()
+                    print('DEBUGGING', self.runner_going, self.counter, flush=True)
                     self.runner_id += 1
 
                 # not debug mode:
                 else:
+                    print('frame size is: ', frame.shape[:2], flush=True)
                     Thread(target=self.model_handler, args=(frame,)).start()
+                    # Thread(target=self.toggle_runner_delay, args=(self.runner_delay,)).start()
             else:
                 pass
         else:
             raise AttributeError("No Model instantiated to process frames with!")
-        if self.result:
-            for result in self.result:
-                if result['name'] == 'Tennis-Ball':
-                    # start, end piont, color (BGR), thickness
-                    frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
-                                          (result['xmax'], result['ymax']), 
-                                          (0, 0, 255), 2)
-                if result['name'] == 'face':
-                    # start, end piont, color (BGR), thickness
-                    frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
-                                          (result['xmax'], result['ymax']), 
-                                          (0, 255, 0), 2)
+
+        # Concenrs with queue being drained by this attempt to add to video. Will consider later in working state
+        # if not self.result.empty():
+        #     result = self.result.get()[0]  # result.get returns a list with dict
+        #     print(type(result), flush=True)
+        #     print(result)
+        #     if result['name'] == 'Tennis-Ball':
+        #         # start, end point, color (BGR), thickness
+        #         frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
+        #                               (result['xmax'], result['ymax']),
+        #                               (0, 0, 255), 2)
+        #     if result['name'] == 'face':
+        #         # start, end point, color (BGR), thickness
+        #         frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
+        #                               (result['xmax'], result['ymax']),
+        #                               (0, 255, 0), 2)
         self._out.write(frame)
         
     def end(self):

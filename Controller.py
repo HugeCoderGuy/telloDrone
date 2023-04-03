@@ -66,7 +66,9 @@ class Controller():
     
     def go_forward(self):
         def drone_forward(self):
-            self.drone.forward(10)
+            self.drone.set_pitch(.4)
+            time.sleep(.8)
+            self.drone.set_pitch(0)
             self.pause_after_call()
             
         Thread(target=drone_forward, args=(self,)).start()
@@ -74,7 +76,9 @@ class Controller():
     
     def go_backward(self):
         def drone_backward(self):
-            self.drone.backward(10)
+            self.drone.set_pitch(-.3)
+            time.sleep(.8)
+            self.drone.set_pitch(0)
             self.pause_after_call()
             
         Thread(target=drone_backward, args=(self,)).start()
@@ -82,28 +86,36 @@ class Controller():
     
     def clockwise(self):
         def drone_clockwise(self):
-            self.drone.clockwise(5)
+            self.drone.set_yaw(.3)
+            time.sleep(.8)
+            self.drone.set_yaw(0)
             self.pause_after_call()
             
         Thread(target=drone_clockwise, args=(self,)).start()
         
     def counter_clockwise(self):
         def drone_counter_clockwise(self):
-            self.drone.counter_clockwise(5)
+            self.drone.set_yaw(.3)
+            time.sleep(.8)
+            self.drone.set_yaw(0)
             self.pause_after_call()
             
         Thread(target=drone_counter_clockwise, args=(self,)).start()
         
     def up(self):
         def drone_up(self):
-            self.drone.up(10)
+            self.drone.set_throttle(.5)
+            time.sleep(.2)
+            self.drone.set_throttle(0)
             self.pause_after_call()
             
         Thread(target=drone_up, args=(self,)).start()
         
     def down(self):
         def drone_down(self):
-            self.drone.down(10)
+            self.drone.set_throttle(-.4)
+            time.sleep(.3)
+            self.drone.set_throttle(0)
             self.pause_after_call()
             
         Thread(target=drone_down, args=(self,)).start()

@@ -20,16 +20,21 @@ class TelloDriver():
         Note, delay in TCP video connection often causes ~1s delay in video feed.
         So, don't throw the ball to hard at the little guy!
         """
-        h, w = frame.shape[:2]
+        # h, w = frame.shape[:2]
+        h = 720
+        w = 960
+        # print('IMAGE SIZE IS: ', h, w)
         self.im_center = {'x': (w/2), 'y': (h/2)}
 
         self.time_tracker = deque([time.time()])
 
         # save face data
         self.face_size = 0
-        self.face_location = 0
+        self.face_location = {'x': (w/2), 'y': (h/2)}
+        self.face_x_dist = 1.5
         self.last_face_location = 0
-        self.real_face_size = .35 # DOUBLE CHECK THIS VALUE
+        self.real_face_size = 13 # face is ~35cm
+        self.new_face = False
 
         # camera variables
         self.focal_length = 1000
@@ -70,7 +75,8 @@ class TelloDriver():
                 if result['confidence'] >= .5:
                     
                     # Tennis ball calcs and identification
-                    if result['name'] == 'Tennis-Ball':
+                    # if result['name'] == 'Tennis-Ball':
+                    if result['name'] == 'delete this line later':
                         self.tennisball_in_frame = True
                         measured_width_ball = int(result['xmax']) - int(result['xmin'])
                         measured_height_ball = int(result['ymax']) - int(result['ymin'])
@@ -104,8 +110,9 @@ class TelloDriver():
                     if result['name'] == 'face':
                         measured_width_face = int(result['xmax']) - int(result['xmin'])
                         measured_height_face = int(result['ymax']) - int(result['ymin'])
+                        print('faces are', measured_height_face, measured_width_face)
                         # ball should be in square bound box. take average for ~ square dims
-                        curr_face_size = (measured_width_face + measured_height_face) / 2
+                        curr_face_size = measured_width_face  # (measured_width_face + measured_height_face) / 2
                         x = int((result['xmax'] + result['xmin']) / 2)
                         y = int((result['ymax'] + result['ymin']) / 2)
                         curr_face_location = {'x': x, 'y': y}
@@ -124,6 +131,8 @@ class TelloDriver():
                         self.face_x_dist = distance_finder(self.focal_length, self.real_face_size, self.face_size)
                         face_counter += 1
                         print("Troubleshooting. Face size is: ", self.face_size)
+                        self.new_face = True
+
 
             if not self.tennisball_in_frame:
                 self.avg_speed['z'] = 0
@@ -139,26 +148,31 @@ class TelloDriver():
         Returns:
             int: value corresponding to Drone action enum
         """
-        face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
-                            'y':(self.face_location['y'] - self.im_center['y'])}
+        if self.new_face:
+            self.new_face = False
+            face_from_center = {'x':(self.face_location['x'] - self.im_center['x']),
+                                'y':(self.face_location['y'] - self.im_center['y'])}
+            print('face vars:', face_from_center, self.face_x_dist)
 
-        # turn towards face direciton
-        if face_from_center['x'] > 20:
-            return DroneEnum.counter_clockwise.value
-        elif face_from_center['x'] < 20:
-            return DroneEnum.counter_clockwise.value
+            # turn towards face direciton
+            if face_from_center['x'] > 175:
+                return DroneEnum.clockwise.value
+            elif face_from_center['x'] < -175:
+                return DroneEnum.counter_clockwise.value
+
+            # adjust y coords based on pixels
+            if -face_from_center['y'] >= 330: # y coords are inversed in frame measures
+                return DroneEnum.up.value
+            elif -face_from_center['y'] <= -25:
+                return DroneEnum.down.value
+
+            # adujust x coord based on face distance
+            if self.face_x_dist <= .4:
+                return DroneEnum.backward.value
+            elif self.face_x_dist >= 2 and self.face_x_dist < 4:
+                return DroneEnum.forward.value
             
-        # adujust x coord based on face distance
-        if self.face_x_dist <= 2.25:
-            return DroneEnum.backward.value
-        elif self.face_x_dist >= 2.75:
-            return DroneEnum.forward.value
-            
-        # adjust y coords based on pixels
-        if -face_from_center['y'] >= 30: # y coords are inversed in frame measures
-            return DroneEnum.down.value
-        elif -face_from_center['y'] <= 30:
-            return DroneEnum.up.value
+
         
         # everything else checks out, don't send any tello commands
         return 0

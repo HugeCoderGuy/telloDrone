@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parent_conn_frame, child_conn_frame = multiprocessing.Pipe()
     parent_conn_results, child_conn_results = multiprocessing.Pipe()
     
-    state = multiprocessing.Value('i', 0)
+    state = multiprocessing.Queue()
     go = multiprocessing.Value('i', 0)
     stop = multiprocessing.Value('i', 0)
 
