@@ -52,11 +52,12 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
         time.sleep(.5)
         backgroundframe = BackgroundFrameRead(container)
         backgroundframe.start()
-        time.sleep(4)
+        time.sleep(2)
 
         # allow model process to begin
         go.value = 1
-        while stop != 1:
+        while stop.value != 1:
+            print(controller.is_disconnected(), flush=True)
             send_conn.send(backgroundframe.frame)
             # print('here1', flush=True)
             # print('here2', flush=True)
@@ -89,6 +90,8 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
                     # if no commands, state = 0 and wildcard catches with pass
                     case _:
                         pass
+            if controller.is_disconnected():
+                stop.value = 1
                     
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -96,6 +99,8 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
         print(ex)
             
     finally:
+        # in event that drone is turned off, stop all other processes
+        stop.value = 1
         backgroundframe.stop()
         controller.land()
         cv2.destroyAllWindows()
@@ -110,7 +115,7 @@ class BackgroundFrameRead:
     """
 
     def __init__(self, container):
-        self.frame = np.zeros([300, 400, 3], dtype=np.uint8)
+        self.frame = np.zeros([720, 960, 3], dtype=np.uint8)
         self.container = container
 
         self.stopped = False

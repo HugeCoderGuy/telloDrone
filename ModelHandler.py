@@ -42,7 +42,6 @@ def model_handler(model, recv_conn: multiprocessing.Pipe,
             else:
                 result = modelhandler.get_result()
                 if result:
-                    print(type(result), flush=True)
                     print(result)
                     tellodriver.update_object_variables(result)
                     # dodge_cmd = tellodriver.dodge_ball()
@@ -52,7 +51,9 @@ def model_handler(model, recv_conn: multiprocessing.Pipe,
                     #     # make sure nothing interrupts the dodge call!
                     #     time.sleep(5)
                     # if no dodge, allow drone to follow the face
-                    drone_state.put(tellodriver.follow_face())
+                    command_to_send = tellodriver.follow_face()
+                    if command_to_send != 0:
+                        drone_state.put(command_to_send)
                 
     finally:
         modelhandler.end()
@@ -77,8 +78,8 @@ class ModelHandler:
         self.stopped = False
         self.model_runners = 0
         self.delay_other_runners = False
-        self.runner_delay = 1.5
-        self.numb_runners = 3
+        self.runner_delay = 1
+        self.numb_runners = 4
 
         self.debug = False
         if self.debug:
@@ -88,8 +89,9 @@ class ModelHandler:
             self.runner_id = 0
             
         # video saving object for run_model
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self._out = cv2.VideoWriter('tello_video.avi', fourcc, 20.0, (1280, 720)) # (640,480))
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        fourcc = cv2.VideoWriter_fourcc(*'AVC1')
+        self._out = cv2.VideoWriter('tello_video.avi', fourcc, 20.0, (960, 720)) # (640,480))
             
     def get_result(self):
         if not self.result.empty():

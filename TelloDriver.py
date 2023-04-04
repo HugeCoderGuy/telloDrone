@@ -72,11 +72,11 @@ class TelloDriver():
         if len(results) > 0:
             for result in results:
                 # filter bad results
-                if result['confidence'] >= .5:
-                    
-                    # Tennis ball calcs and identification
-                    # if result['name'] == 'Tennis-Ball':
-                    if result['name'] == 'delete this line later':
+
+                # Tennis ball calcs and identification
+                # if result['name'] == 'Tennis-Ball':
+                if result['name'] == 'delete this line later':
+                    if result['confidence'] >= .5:
                         self.tennisball_in_frame = True
                         measured_width_ball = int(result['xmax']) - int(result['xmin'])
                         measured_height_ball = int(result['ymax']) - int(result['ymin'])
@@ -107,7 +107,8 @@ class TelloDriver():
                         self.last_dist['y'] = self.ball_location['y']
 
                     # Face locating 
-                    if result['name'] == 'face':
+                if result['name'] == 'face':
+                    if result['confidence'] >= .3:
                         measured_width_face = int(result['xmax']) - int(result['xmin'])
                         measured_height_face = int(result['ymax']) - int(result['ymin'])
                         print('faces are', measured_height_face, measured_width_face)
@@ -155,21 +156,21 @@ class TelloDriver():
             print('face vars:', face_from_center, self.face_x_dist)
 
             # turn towards face direciton
-            if face_from_center['x'] > 175:
+            if face_from_center['x'] > 125:
                 return DroneEnum.clockwise.value
-            elif face_from_center['x'] < -175:
+            elif face_from_center['x'] < -125:
                 return DroneEnum.counter_clockwise.value
 
             # adjust y coords based on pixels
-            if -face_from_center['y'] >= 330: # y coords are inversed in frame measures
+            if -face_from_center['y'] >= 315: # y coords are inversed in frame measures
                 return DroneEnum.up.value
             elif -face_from_center['y'] <= -25:
                 return DroneEnum.down.value
 
             # adujust x coord based on face distance
-            if self.face_x_dist <= .4:
+            if self.face_x_dist <= .9:
                 return DroneEnum.backward.value
-            elif self.face_x_dist >= 2 and self.face_x_dist < 4:
+            elif self.face_x_dist >= 1.5 and self.face_x_dist < 4:
                 return DroneEnum.forward.value
             
 

@@ -76,7 +76,7 @@ class Controller():
     
     def go_backward(self):
         def drone_backward(self):
-            self.drone.set_pitch(-.3)
+            self.drone.set_pitch(-.4)
             time.sleep(.8)
             self.drone.set_pitch(0)
             self.pause_after_call()
@@ -126,10 +126,26 @@ class Controller():
             self.pause_after_call()
             self.stopped = True
             
-        Thread(target=drone_land, args=()).start()
+        Thread(target=drone_land, args=(self,)).start()
         return self
 
+    def is_disconnected(self):
+        print('the drone state is ', self.drone.state)
+        return self.drone.state == State('disconnected')
 
+
+class State(object):
+    def __init__(self, name='annoymous'):
+        self.name = name
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return '%s::%s' % (self.__class__.__name__, self.name)
+
+    def getname(self):
+        return self.name
 
 if __name__ == "__main__":
     drone = tellopy.Tello()
