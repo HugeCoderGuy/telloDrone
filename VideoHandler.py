@@ -90,7 +90,7 @@ def video_handler(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
                     # if no commands, state = 0 and wildcard catches with pass
                     case _:
                         pass
-            if controller.is_disconnected():
+            if not controller.is_connected():
                 stop.value = 1
                     
     except Exception as ex:

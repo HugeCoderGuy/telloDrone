@@ -129,9 +129,9 @@ class Controller():
         Thread(target=drone_land, args=(self,)).start()
         return self
 
-    def is_disconnected(self):
+    def is_connected(self):
         print('the drone state is ', self.drone.state)
-        return self.drone.state == State('disconnected')
+        return self.drone.state == State('connected')
 
 
 class State(object):

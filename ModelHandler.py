@@ -91,7 +91,7 @@ class ModelHandler:
         # video saving object for run_model
         # fourcc = cv2.VideoWriter_fourcc(*'XVID')
         fourcc = cv2.VideoWriter_fourcc(*'AVC1')
-        self._out = cv2.VideoWriter('tello_video.avi', fourcc, 20.0, (960, 720)) # (640,480))
+        self._out = cv2.VideoWriter('tello_video.avi', fourcc, 30, (960, 720)) # (640,480))
             
     def get_result(self):
         if not self.result.empty():
