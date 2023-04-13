@@ -75,6 +75,9 @@ class ModelHandler:
         self.recv_conn = recv_conn
         self.result = Queue(maxsize=10)
 
+        self.current_result = None  # used for display bounding boxes on video
+        self.show_bb_for_frames = 5
+
         self.stopped = False
         self.model_runners = 0
         self.delay_other_runners = False
@@ -120,6 +123,7 @@ class ModelHandler:
             if self.debug:
                 result[0]['runner_id'] = runner_id
             self.result.put(result)
+            self.current_result = result
         if self.debug:
             self.runner_going[self.counter] = (runner_id, False)
             self.counter += 1
@@ -149,21 +153,13 @@ class ModelHandler:
         else:
             raise AttributeError("No Model instantiated to process frames with!")
 
-        # Concenrs with queue being drained by this attempt to add to video. Will consider later in working state
-        # if not self.result.empty():
-        #     result = self.result.get()[0]  # result.get returns a list with dict
-        #     print(type(result), flush=True)
-        #     print(result)
-        #     if result['name'] == 'Tennis-Ball':
-        #         # start, end point, color (BGR), thickness
-        #         frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
-        #                               (result['xmax'], result['ymax']),
-        #                               (0, 0, 255), 2)
-        #     if result['name'] == 'face':
-        #         # start, end point, color (BGR), thickness
-        #         frame = cv2.rectangle(frame, (result['xmin'], result['ymin']),
-        #                               (result['xmax'], result['ymax']),
-        #                               (0, 255, 0), 2)
+        if self.current_result != None:
+            for result in self.current_result:
+                if result['name'] == 'Tennis-Ball':
+                    bb_color = (255, 0, 0)  # BGR
+                elif result['name'] == 'face':
+                    bb_color = (0, 0, 255)  # BGR
+                frame = cv2.rectangle(frame, (result['xmin'], result['ymin']), (result['xmax'], result['ymax']), bb_color, 2)
         self._out.write(frame)
         
     def end(self):
