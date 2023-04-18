@@ -42,7 +42,7 @@ def model_handler(model, recv_conn: multiprocessing.Pipe,
             else:
                 result = modelhandler.get_result()
                 if result:
-                    print(result)
+                    print(result, flush=True)
                     tellodriver.update_object_variables(result)
                     # dodge_cmd = tellodriver.dodge_ball()
                     # # dodge command is processed first
@@ -81,8 +81,8 @@ class ModelHandler:
         self.stopped = False
         self.model_runners = 0
         self.delay_other_runners = False
-        self.runner_delay = 1
-        self.numb_runners = 4
+        self.runner_delay = .5
+        self.numb_runners = 10
 
         self.debug = False
         if self.debug:
@@ -153,13 +153,17 @@ class ModelHandler:
         else:
             raise AttributeError("No Model instantiated to process frames with!")
 
-        if self.current_result != None:
-            for result in self.current_result:
-                if result['name'] == 'Tennis-Ball':
-                    bb_color = (255, 0, 0)  # BGR
-                elif result['name'] == 'face':
-                    bb_color = (0, 0, 255)  # BGR
-                frame = cv2.rectangle(frame, (result['xmin'], result['ymin']), (result['xmax'], result['ymax']), bb_color, 2)
+        # print('CURRENT RESULT IS', self.current_result)
+        # if self.current_result != None:
+        #     print('1')
+        #     for result in self.current_result:
+        #         if result['name'] == 'Tennis-Ball':
+        #             bb_color = (255, 0, 0)  # BGR
+        #         elif result['name'] == 'face':
+        #             bb_color = (0, 0, 255)  # BGR
+        #         print('2')
+        #         frame = cv2.rectangle(frame, (result['xmin'], result['ymin']), (result['xmax'], result['ymax']), bb_color, 2)
+        #         print('3')
         self._out.write(frame)
         
     def end(self):

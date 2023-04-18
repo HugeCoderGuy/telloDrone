@@ -156,6 +156,101 @@ class BackgroundFrameRead:
         """
         self.stopped = True
 
+
+def video_handler_poc(send_conn: multiprocessing.Pipe, state: multiprocessing.Value,
+                  go: multiprocessing.Value, stop: multiprocessing.Value, video):
+    """Video/Drone process handling video feed and tello api calls
+
+    Tello commands are filtered through wrapper class Controller.
+    The video feed runs in the background as a thread to ensure that
+    the frames don't lag.
+
+    Args:
+        send_conn (multiprocessing.Pipe): Pipe to model process sending frames
+        state (multiprocessing.Value): current drone state shared as an int
+        go (multiprocessing.Value): A flag shared between process to synchronize
+        stop (multiprocessing.Value): indicator to end the process
+    """
+    vid = video
+    time.sleep(1)
+
+    # drone = tellopy.Tello()
+    # drone.connect()
+    # drone.wait_for_connection(60.0)
+    # # drone.toggle_fast_mode()
+    # # drone.set_att_limit(10)
+    # print('connected to drone', flush=True)
+    #
+    try:
+    #     retry = 3
+    #     container = None
+    #     while container is None and 0 < retry:
+    #         retry -= 1
+    #         try:
+    #             container = av.open(drone.get_video_stream())
+    #         except av.AVError as ave:
+    #             print(ave, flush=True)
+    #             print('retry...', flush=True)
+    #
+    #     backgroundframe = BackgroundFrameRead(container)
+    #     backgroundframe.start()
+    #     time.sleep(2)
+
+        # allow model process to begin
+        go.value = 1
+        while stop.value != 1:
+            print('reading video', flush=True)
+            ret, frame = vid.read()
+            print(ret, frame, flush=True)
+            # send_conn.send(backgroundframe.frame)
+            send_conn.send(frame)
+            # print('here2', flush=True)
+            # cv2.imshow('Tello View', backgroundframe.frame)
+            # print('here3', flush=True)
+            # cv2.waitKey(1)
+            # process is to iterate through state value, act on it, then reset state
+            if not state.empty():
+                print('here1', flush=True)
+
+                curr_state = state.get()
+                print(curr_state, flush=True)
+                match curr_state:
+                    case DroneEnum.dodge_left.value:
+                        print('Dodge Left', flush=True)
+                    case DroneEnum.dodge_right.value:
+                        print('Dodge Right', flush=True)
+                    case DroneEnum.dodge_up.value:
+                        print('Dodge Up', flush=True)
+                    case DroneEnum.forward.value:
+                        print('Forward', flush=True)
+                    case DroneEnum.backward.value:
+                        print('Backward', flush=True)
+                    case DroneEnum.clockwise.value:
+                        print('Clockwise', flush=True)
+                    case DroneEnum.counter_clockwise.value:
+                        print('Counter_Clockwise', flush=True)
+                    case DroneEnum.up.value:
+                        print('Up', flush=True)
+                    case DroneEnum.down.value:
+                        print('Down', flush=True)
+                    # if no commands, state = 0 and wildcard catches with pass
+                    case _:
+                        pass
+
+    except Exception as ex:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        print(ex)
+
+    finally:
+        # in event that drone is turned off, stop all other processes
+        stop.value = 1
+        # backgroundframe.stop()
+        cv2.destroyAllWindows()
+        vid.release()
+        # add a sleep command to ensure drone finishes landing
+        time.sleep(3)
+
 if __name__ == "__main__":
     frame_reader = BackgroundFrameRead()
     while True:

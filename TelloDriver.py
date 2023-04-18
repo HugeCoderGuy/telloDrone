@@ -156,13 +156,13 @@ class TelloDriver():
             print('face vars:', face_from_center, self.face_x_dist)
 
             # turn towards face direciton
-            if face_from_center['x'] > 125:
+            if face_from_center['x'] > 150:
                 return DroneEnum.clockwise.value
-            elif face_from_center['x'] < -125:
+            elif face_from_center['x'] < -150:
                 return DroneEnum.counter_clockwise.value
 
             # adjust y coords based on pixels
-            if -face_from_center['y'] >= 315: # y coords are inversed in frame measures
+            if -face_from_center['y'] >= 180: # y coords are inversed in frame measures
                 return DroneEnum.up.value
             elif -face_from_center['y'] <= -25:
                 return DroneEnum.down.value
